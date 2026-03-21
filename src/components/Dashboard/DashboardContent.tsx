@@ -9,25 +9,39 @@ import { RegistrationsView } from "./views/RegistrationsView";
 import { ReportsView } from "./views/ReportsView";
 import { SettingsView } from "./views/SettingsView";
 import { UsersView } from "./views/UsersView";
+import { UserRole } from "@/lib/types";
 
-const viewMap: Record<string, React.ComponentType> = {
+interface ViewMapProps {
+    userRole?: UserRole;
+}
+
+const viewMap: Record<string, React.ComponentType<any>> = {
     dashboard: DashboardOverview,
     events: EventsView,
     registrations: RegistrationsView,
     users: UsersView,
     payments: PaymentsView,
-    'create-event': CreateEventView,
+    "create-event": CreateEventView,
     reports: ReportsView,
     settings: SettingsView,
 };
 
 const DashboardContent = () => {
-    const { activeSection } = useApp();
+    const { activeSection, currentUser } = useApp();
+
+    // Determine which props to pass to the current view
+    const viewProps: ViewMapProps =
+        activeSection === "payments"
+            ? {
+                userRole: currentUser?.role,
+            }
+            : {};
+
     const View = viewMap[activeSection] || DashboardOverview;
 
     return (
         <div className="animate-fade-in w-full">
-            <View />
+            <View {...viewProps} />
         </div>
     )
 }

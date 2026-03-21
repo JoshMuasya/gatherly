@@ -22,22 +22,10 @@ import { toast } from 'sonner';
 import { TicketDialog } from '@/components/Tickets/TicketDialog';
 
 interface Props {
-  payments: Payment[];
-  userId: string;
   userRole: UserRole;
 }
 
-const methodLabels: Record<string, string> = {
-  cash: 'Cash',
-  mpesa: 'M-Pesa',
-};
-
-const paymentMethodVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
-  mpesa: 'default',
-  cash: 'secondary',
-};
-
-export function PaymentsView({ payments = [], userId, userRole }: Props) {
+export function PaymentsView({ userRole }: Props) {
   const { currentUser } = useApp();
   const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
   const [registeredEvents, setRegisteredEvents] = useState<Events[]>([]);
