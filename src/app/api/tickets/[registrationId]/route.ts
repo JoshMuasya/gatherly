@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/firebase-admin";
 
-export async function GET( { params }: { params: { registrationId: string } }) {
-  const { registrationId } = params;
+export async function GET(
+  request: NextRequest,
+  context: { params: { registrationId: string } }
+) {
+  const { registrationId } = context.params;
 
   if (!registrationId) {
     return NextResponse.json({ error: "No registration ID provided" }, { status: 400 });
   }
 
   try {
-
     const registrationRef = adminDb.collection("registrations").doc(registrationId);
     const registrationSnap = await registrationRef.get();
 
