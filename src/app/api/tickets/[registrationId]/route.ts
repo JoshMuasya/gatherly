@@ -3,9 +3,10 @@ import { adminDb } from "@/lib/firebase/firebase-admin";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { registrationId: string } }
+  context: { params: Promise<{ registrationId: string }> }
 ) {
-  const { registrationId } = context.params;
+  // Await the params because Next.js 15 wraps them in a Promise
+  const { registrationId } = await context.params;
 
   if (!registrationId) {
     return NextResponse.json({ error: "No registration ID provided" }, { status: 400 });
