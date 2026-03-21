@@ -3,7 +3,6 @@
 import { Calendar, Users, CreditCard, TrendingUp, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useApp } from '@/lib/context/AppContext';
-import { mockPayments, mockRegistrations } from '@/lib/data/mock';
 import { StatCard } from '../StatCard';
 import { Badge } from '@/components/ui/badge';
 import { EventCard } from '../EventCard';
@@ -29,7 +28,6 @@ export function DashboardOverview() {
     const upcomingEvents = events.filter(e => new Date(e.date) > new Date());
     const [registrations, setRegistrations] = useState<any[]>([])
     const [totalRegistrations, setTotalRegistrations] = useState(0)
-    const totalRevenue = mockPayments.reduce((sum, p) => sum + p.amount, 0);
     const [latestRegistrations, setLatestRegistrations] = useState<Registration[]>([]);
     const [payments, setPayments] = useState<Payment[]>([])
 

@@ -15,9 +15,6 @@ const app =
       })
     : getApps()[0];
 
-    console.log("Project:", process.env.FIREBASE_PROJECT_ID);
-console.log("Bucket:", process.env.FIREBASE_STORAGE_BUCKET);
-
 
 export const adminAuth = getAuth(app);
 export const adminDb = getFirestore(app);
