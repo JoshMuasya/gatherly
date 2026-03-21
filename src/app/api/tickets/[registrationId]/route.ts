@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/firebase-admin";
 
-export async function GET(request: NextRequest, { params }: { params: { registrationId: string } }) {
+export async function GET( { params }: { params: { registrationId: string } }) {
   const { registrationId } = params;
 
   if (!registrationId) {
