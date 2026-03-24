@@ -66,8 +66,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  console.log("User AppContext", currentUser)
-
   // Fetch events
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'events'), (snapshot) => {
@@ -132,8 +130,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // Clear state manually (important for instant UI update)
       setCurrentUser(null);
-
-      console.log("Logging out")
 
       router.push('/auth/login');
     } catch (error) {

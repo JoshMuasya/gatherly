@@ -6,12 +6,13 @@ import { useApp } from '@/lib/context/AppContext';
 import { StatCard } from '../StatCard';
 import { Badge } from '@/components/ui/badge';
 import { EventCard } from '../EventCard';
-import { useEffect, useState } from 'react';
-import { Events, Payment, Registration, User, UserRole } from '@/lib/types';
+import { useEffect, useMemo, useState } from 'react';
+import { Events, Payment, Registration, TicketData, User, UserRole } from '@/lib/types';
 import { toast } from "sonner";
 import { auth } from '@/lib/firebase/firebase';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { TicketDialog } from '@/components/Tickets/TicketDialog';
 
 
 export function DashboardOverview() {
@@ -30,6 +31,17 @@ export function DashboardOverview() {
     const [totalRegistrations, setTotalRegistrations] = useState(0)
     const [latestRegistrations, setLatestRegistrations] = useState<Registration[]>([]);
     const [payments, setPayments] = useState<Payment[]>([])
+    const [allPayments, setAllPayments] = useState<Payment[]>([]);
+    const [ticketData, setTicketData] = useState<TicketData | null>(null);
+    const [allRegistrations, setAllRegistrations] = useState<{
+        id: string;
+        eventId: string;
+        userId: string;
+        name: string;
+        email: string;
+        phone?: string | null;
+        registeredAt?: string | null;
+    }[]>([]);
 
     const role: UserRole = currentUser?.role ?? "Youth";
 
@@ -113,6 +125,7 @@ export function DashboardOverview() {
                 setLatestRegistrations(latestFive);
 
                 setRegistrations(data.registrations)
+                setAllRegistrations(data.registrations)
                 setTotalRegistrations(data.count)
 
             } catch (err: any) {
@@ -133,6 +146,7 @@ export function DashboardOverview() {
 
                 const data = await res.json()
                 setPayments(data.payments || [])
+                setAllPayments(data.payments)
             } catch (err) {
                 toast.error("Failed to load payments")
             }
@@ -243,6 +257,16 @@ export function DashboardOverview() {
         }
     };
 
+    const getUserRegistration = (eventId: string) => {
+        return allRegistrations.find(
+            (reg) => reg.eventId === eventId && reg.userId === currentUser?.id
+        );
+    };
+
+    const paidEventsIds = useMemo(() => {
+        return allPayments.map((payment) => payment.eventId)
+    }, [allPayments])
+
     // Show loading only while auth is initializing
     if (isAuthLoading) return <div>Loading...</div>;
 
@@ -329,18 +353,45 @@ export function DashboardOverview() {
                 <div className="lg:col-span-2 space-y-4">
                     <h2 className="font-display font-semibold text-foreground text-lg">Upcoming Events</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {upcomingEvents.slice(0, 4).map(event => (
-                            <EventCard
-                                key={event.id}
-                                event={event}
-                                userRole={role}
-                                isRegistered={registeredEvents[event.id]}
-                                onRegister={() => {
-                                    setSelectedEvent(event);
-                                    setRegisterOpen(true);
-                                }}
-                            />
-                        ))}
+                        {upcomingEvents.slice(0, 4).map((event) => {
+                            const hasPaid = paidEventsIds.includes(event.id);
+
+                            return (
+                                <EventCard
+                                    key={event.id}
+                                    event={event}
+                                    userRole={role}
+                                    isRegistered={registeredEvents[event.id]}
+                                    onRegister={() => {
+                                        setSelectedEvent(event);
+                                        setRegisterOpen(true);
+                                    }}
+                                    onPay={!hasPaid && event.price > 0 ? () => setSelectedEvent(event) : undefined}
+
+                                    canPrintTicket={event.price === 0 || hasPaid}
+
+                                    onPrintTicket={() => {
+                                        const registration = getUserRegistration(event.id);
+
+                                        if (!registration) {
+                                            toast.error("You are not registered for this event");
+                                            return;
+                                        }
+
+                                        setTicketData({
+                                            registrationId: registration.id,
+                                            eventId: event.id,
+                                            eventTitle: event.title,
+                                            date: event.date,
+                                            time: event.time,
+                                            location: event.location,
+                                            name: registration.name || currentUser?.name || '',
+                                            email: registration.email || currentUser?.email || '',
+                                        });
+                                    }}
+                                />
+                            )
+                        })}
                     </div>
                 </div>
 
@@ -439,6 +490,15 @@ export function DashboardOverview() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Ticket */}
+            {ticketData && (
+                <TicketDialog
+                    data={ticketData}
+                    open={!!ticketData}
+                    onClose={() => setTicketData(null)}
+                />
+            )}
         </div>
     );
 }

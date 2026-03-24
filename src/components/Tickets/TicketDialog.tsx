@@ -17,6 +17,19 @@ export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
     eventTitle: data.eventTitle,
   });
 
+  const eventDate = new Date(data.date);
+
+  const formattedDate = eventDate.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const formattedTime = eventDate.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="w-2/3">
@@ -29,8 +42,8 @@ export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
           <div className="w-full bg-background rounded-xl p-4 shadow-inner border">
             <div className="space-y-2 text-sm mb-4">
               <p><strong>Event:</strong> {data.eventTitle}</p>
-              <p><strong>Date:</strong> {data.date}</p>
-              <p><strong>Time:</strong> {data.time}</p>
+              <p><strong>Date:</strong> {formattedDate}</p>
+              <p><strong>Time:</strong> {formattedTime}</p>
               <p><strong>Location:</strong> {data.location}</p>
               <p><strong>Name:</strong> {data.name}</p>
               <p><strong>Email:</strong> {data.email}</p>

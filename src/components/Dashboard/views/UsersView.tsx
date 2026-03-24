@@ -85,8 +85,6 @@ export function UsersView() {
 
                 const data = await res.json()
 
-                console.log("Users", data)
-
                 setUsers(data.users)
             } catch (err: any) {
                 setError(err.message)

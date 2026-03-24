@@ -87,8 +87,6 @@ export function PaymentsView({ userRole }: Props) {
           });
 
           setEvents(eventsWithRegistration);
-
-          console.log("Events", events)
         }
       } catch (error: any) {
         setError(error.message)
@@ -144,9 +142,19 @@ export function PaymentsView({ userRole }: Props) {
   const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
+  // Paid events per current user (for EventCards)
   const paidEventsIds = useMemo(() => {
-    return allPayments.map((payment) => payment.eventId)
-  }, [allPayments])
+    if (!currentUser) return [];
+    return allPayments
+      .filter((payment) => payment.userId === currentUser.id)
+      .map((payment) => payment.eventId);
+  }, [allPayments, currentUser]);
+
+  // Filter only registered events for cards
+  const registeredEventsForCards = useMemo(() => {
+    if (!currentUser) return [];
+    return events.filter((event) => registrations.some((reg) => reg.eventId === event.id && reg.userId === currentUser.id));
+  }, [events, registrations, currentUser]);
 
   const totalRevenue = useMemo(() => {
     return allPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -178,32 +186,34 @@ export function PaymentsView({ userRole }: Props) {
 
       {/* Registered Events */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loadingEvents && <p className="text-center text-muted-foreground col-span-full">Loading events...</p>}
-        {!loadingEvents && events.length === 0 && (
+        {loadingEvents && (
+          <p className="text-center text-muted-foreground col-span-full">Loading events...</p>
+        )}
+
+        {!loadingEvents && registeredEventsForCards.length === 0 && (
           <p className="text-muted-foreground col-span-full text-center">
             No registered events found.
           </p>
         )}
-        {events.map((event) => {
+
+        {registeredEventsForCards.map((event) => {
           const hasPaid = paidEventsIds.includes(event.id);
 
           return (
             <EventCard
               key={event.id}
               event={event}
-              userRole={currentUser!.role}
+              userRole={currentUser?.role || 'Youth'}
               showAdminActions={false}
               isRegistered
               onCancelRegistration={() => cancelRegistration(event.id)}
-
               onPay={!hasPaid && event.price > 0 ? () => setSelectedEvent(event) : undefined}
-
               canPrintTicket={event.price === 0 || hasPaid}
-
               onPrintTicket={() => {
                 if (event.registrationId) {
                   setTicketData({
                     registrationId: event.registrationId,
+                    eventId: event.id,
                     eventTitle: event.title,
                     date: event.date,
                     time: event.time,

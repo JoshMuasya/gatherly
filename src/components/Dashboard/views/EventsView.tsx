@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { auth, db } from '@/lib/firebase/firebase';
 import { toast } from "sonner";
-import { Events } from '@/lib/types';
+import { Events, Payment, TicketData } from '@/lib/types';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
+import { TicketDialog } from '@/components/Tickets/TicketDialog';
 
 interface EventsState {
     events: Events[];
@@ -32,7 +33,19 @@ export function EventsView() {
     const [selectedEvent, setSelectedEvent] = useState<Events | null>(null);
     const [registerLoading, setRegisterLoading] = useState(false);
     const [registerSuccess, setRegisterSuccess] = useState(false);
+    const [allPayments, setAllPayments] = useState<Payment[]>([]);
+    const [loadingPayments, setLoadingPayments] = useState(false);
+    const [ticketData, setTicketData] = useState<TicketData | null>(null);
     const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+    const [allRegistrations, setAllRegistrations] = useState<{
+        id: string;
+        eventId: string;
+        userId: string;
+        name: string;
+        email: string;
+        phone?: string | null;
+        registeredAt?: string | null;
+    }[]>([]);
 
     const [newEvent, setNewEvent] = useState({
         title: '',
@@ -61,6 +74,59 @@ export function EventsView() {
         return () => unsubscribe();
     }, []);
 
+    /** Fetch payments */
+    useEffect(() => {
+        const fetchPayments = async () => {
+            if (!currentUser?.id) return;
+
+            setLoadingPayments(true);
+            try {
+                const url = isAdminLeader ? '/api/payments' : `/api/payments?userId=${currentUser.id}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Failed to fetch payments');
+                const { payments } = await res.json();
+                setAllPayments(payments);
+            } catch (err) {
+                console.error('Error fetching payments:', err);
+            } finally {
+                setLoadingPayments(false);
+            }
+        };
+
+        fetchPayments();
+    }, [currentUser?.id, isAdminLeader]);
+
+    // Fetch Registrations
+    useEffect(() => {
+        const fetchRegistrations = async () => {
+            if (!currentUser?.id) return;
+
+            try {
+                const url = currentUser.role === "Admin" || currentUser.role === "Leader"
+                    ? '/api/registrations'
+                    : `/api/registrations?userId=${currentUser.id}`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (res.ok && data.registrations) {
+                    setAllRegistrations(data.registrations);
+                } else {
+                    console.error("Failed to fetch registrations");
+                }
+            } catch (err) {
+                console.error("Error fetching registrations:", err);
+            }
+        };
+
+        fetchRegistrations();
+    }, [currentUser]);
+
+    const getUserRegistration = (eventId: string) => {
+        return allRegistrations.find(
+            (reg) => reg.eventId === eventId && reg.userId === currentUser?.id
+        );
+    };
 
     const filteredEvents = useMemo(() => {
         if (!search) return eventsState.events;
@@ -247,6 +313,10 @@ export function EventsView() {
         }
     };
 
+    const paidEventsIds = useMemo(() => {
+        return allPayments.map((payment) => payment.eventId)
+    }, [allPayments])
+
     if (!currentUser) return <div>Loading...</div>;
 
     return (
@@ -272,25 +342,53 @@ export function EventsView() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredEvents?.map(event => (
-                    <EventCard
-                        key={event.id}
-                        event={event}
-                        userRole={currentUser?.role}
-                        isRegistered={eventsState.registeredEvents[event.id]}
-                        isDeleting={deletingEventId === event.id}
-                        showAdminActions={currentUser?.role === "Admin" || currentUser?.role === "Leader"}
-                        onDelete={() => handleDeleteEvent(event.id)}
-                        onEdit={() => {
-                            setEditingEvent(event);
-                            setEditOpen(true);
-                        }}
-                        onRegister={() => {
-                            setSelectedEvent(event);
-                            setRegisterOpen(true);
-                        }}
-                    />
-                ))}
+                {filteredEvents?.map((event) => {
+                    const hasPaid = paidEventsIds.includes(event.id);
+
+                    return (
+                        <EventCard
+                            key={event.id}
+                            event={event}
+                            userRole={currentUser?.role}
+                            isRegistered={eventsState.registeredEvents[event.id]}
+                            isDeleting={deletingEventId === event.id}
+                            showAdminActions={currentUser?.role === "Admin" || currentUser?.role === "Leader"}
+                            onDelete={() => handleDeleteEvent(event.id)}
+                            onEdit={() => {
+                                setEditingEvent(event);
+                                setEditOpen(true);
+                            }}
+                            onRegister={() => {
+                                setSelectedEvent(event);
+                                setRegisterOpen(true);
+                            }}
+
+                            onPay={!hasPaid && event.price > 0 ? () => setSelectedEvent(event) : undefined}
+
+                            canPrintTicket={event.price === 0 || hasPaid}
+
+                            onPrintTicket={() => {
+                                const registration = getUserRegistration(event.id);
+
+                                if (!registration) {
+                                    toast.error("You are not registered for this event");
+                                    return;
+                                }
+
+                                setTicketData({
+                                    registrationId: registration.id,    
+                                    eventId: event.id,
+                                    eventTitle: event.title,
+                                    date: event.date,
+                                    time: event.time,
+                                    location: event.location,
+                                    name: registration.name || currentUser?.name || '',
+                                    email: registration.email || currentUser?.email || '',
+                                });
+                            }}
+                        />
+                    )
+                })}
             </div>
 
             {filteredEvents?.length === 0 && (
@@ -503,6 +601,15 @@ export function EventsView() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Ticket */}
+            {ticketData && (
+                <TicketDialog
+                    data={ticketData}
+                    open={!!ticketData}
+                    onClose={() => setTicketData(null)}
+                />
+            )}
         </div>
     );
 }

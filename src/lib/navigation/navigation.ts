@@ -8,6 +8,7 @@ import {
   CreditCard,
   BarChart3,
   Settings,
+  CheckCircle,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -22,18 +23,24 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
     { title: 'Events', id: 'events', icon: Calendar },
     { title: 'My Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Payments', id: 'payments', icon: CreditCard },
   ],
   Leader: [
     { title: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
     { title: 'My Events', id: 'events', icon: Calendar },
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Check In', id: 'check-in', icon: CheckCircle }, 
+    { title: 'Payments', id: 'payments', icon: CreditCard },
   ],
-  Admin: [
+
+Admin: [
     { title: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
     { title: 'Events', id: 'events', icon: Calendar },
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Users', id: 'users', icon: Users },
+    { title: 'Registrations', id: 'registrations', icon: ClipboardList }, 
+    { title: 'Check In', id: 'check-in', icon: CheckCircle }, 
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
     { title: 'Settings', id: 'settings', icon: Settings },

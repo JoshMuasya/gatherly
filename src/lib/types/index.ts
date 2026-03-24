@@ -12,7 +12,8 @@ export interface User {
 
 export interface TicketData {
   registrationId: string;
-  eventTitle: string;
+  eventId: string;
+  eventTitle?: string;
   date: string;
   time: string;
   location: string;
