@@ -14,7 +14,7 @@ interface TicketDialogProps {
 export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
   const qrPayload = JSON.stringify({
     registrationId: data.registrationId,
-    eventTitle: data.eventTitle,
+    eventId: data.eventId,
   });
 
   const eventDate = new Date(data.date);
@@ -60,9 +60,9 @@ export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
           </div>
         </div>
 
-        <DialogFooter className="mt-4 flex flex-col sm:flex-row justify-center gap-2">
-          <Button className="w-full sm:w-auto" onClick={() => window.print()}>Print Ticket</Button>
-          <Button variant="outline" className="w-full sm:w-auto" onClick={onClose}>Close</Button>
+        <DialogFooter className="mt-4 flex flex-col justify-center gap-2">
+          <Button className="w-full" onClick={() => window.print()}>Print Ticket</Button>
+          <Button variant="outline" className="w-full" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
