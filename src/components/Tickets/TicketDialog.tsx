@@ -32,15 +32,15 @@ export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="w-2/3">
+      <DialogContent className="w-full max-w-md sm:max-w-lg md:max-w-xl p-4">
         <DialogHeader>
-          <DialogTitle className="text-center">Event Ticket</DialogTitle>
+          <DialogTitle className="text-center text-lg sm:text-xl md:text-2xl">Event Ticket</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 items-center justify-center bg-muted p-4 rounded-xl border shadow">
           {/* Ticket Details */}
           <div className="w-full bg-background rounded-xl p-4 shadow-inner border">
-            <div className="space-y-2 text-sm mb-4">
+            <div className="space-y-2 text-sm sm:text-base mb-4">
               <p><strong>Event:</strong> {data.eventTitle}</p>
               <p><strong>Date:</strong> {formattedDate}</p>
               <p><strong>Time:</strong> {formattedTime}</p>
@@ -52,7 +52,7 @@ export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
 
             {/* QR Code */}
             <div className="flex flex-col items-center gap-2">
-              <QRCode value={qrPayload} size={160} />
+              <QRCode value={qrPayload} size={128} className="sm:h-40 sm:w-40" />
               <p className="text-xs text-muted-foreground text-center">
                 Present this QR code at event check-in
               </p>
@@ -60,9 +60,9 @@ export function TicketDialog({ data, open, onClose }: TicketDialogProps) {
           </div>
         </div>
 
-        <DialogFooter className="mt-2 flex justify-center gap-2">
-          <Button onClick={() => window.print()}>Print Ticket</Button>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+        <DialogFooter className="mt-4 flex flex-col sm:flex-row justify-center gap-2">
+          <Button className="w-full sm:w-auto" onClick={() => window.print()}>Print Ticket</Button>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
