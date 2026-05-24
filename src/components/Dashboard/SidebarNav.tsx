@@ -17,7 +17,7 @@ export function SidebarNav({ collapsed }: Props) {
 
     return (
         <SidebarGroup>
-            <SidebarGroupLabel className="text-white/50 text-[10px] uppercase tracking-widest font-semibold px-4">
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest font-semibold px-4">
                 Navigation
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -31,8 +31,8 @@ export function SidebarNav({ collapsed }: Props) {
                                     className={cn(
                                         'mx-2 rounded-lg transition-all duration-200',
                                         isActive
-                                            ? 'bg-[#4F46E5] w-5/6 text-sidebar-primary-foreground shadow-md'
-                                            : 'text-white w-5/6 hover:bg-sidebar-accent'
+                                            ? 'bg-sidebar-primary w-5/6 text-sidebar-primary-foreground shadow-md'
+                                            : 'text-sidebar-foreground w-5/6 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                                     )}
                                 >
                                     <item.icon className="h-4 w-4 shrink-0" />

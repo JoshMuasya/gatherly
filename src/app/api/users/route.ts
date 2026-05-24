@@ -1,94 +1,98 @@
 import { adminAuth, adminDb } from "@/lib/firebase/firebase-admin";
-import { count } from "console";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError, requireRole } from "@/lib/api/auth";
+import { ok, created, badRequest, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { sanitizeString } from "@/lib/api/sanitize";
+import { writeAuditLog } from "@/lib/api/audit";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`user-create:${ip}`);
+  if (limited) return limited;
+
   try {
-    const { name, email, password, phoneNumber, role } = await request.json();
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-    // Security checks (unchanged)
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    if (roleError) return roleError;
+
+    const body = await request.json();
+    const name = sanitizeString(body.name);
+    const email = sanitizeString(body.email).toLowerCase();
+    const phoneNumber = sanitizeString(body.phoneNumber ?? "");
+    const role = sanitizeString(body.role) || "Youth";
+    const { password } = body;
+
+    if (!name || !email || !password) {
+      return badRequest("name, email, and password are required");
     }
 
-    const idToken = authHeader.split("Bearer ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const createData: Record<string, string> = { email, password, displayName: name };
+    if (phoneNumber.startsWith("+")) createData.phoneNumber = phoneNumber;
 
-    const callerDoc = await adminDb.collection("users").doc(decodedToken.uid).get();
-    if (!callerDoc.exists || callerDoc.data()!.role !== "Admin") {
-      return NextResponse.json({ error: "Admin access only" }, { status: 403 });
-    }
-
-    // Create user
-    const createUserData: any = { email, password, displayName: name };
-    if (phoneNumber?.trim().startsWith("+")) createUserData.phoneNumber = phoneNumber.trim();
-
-    const userRecord = await adminAuth.createUser(createUserData);
-
-    // 🔥 Generate secure password reset link
+    const userRecord = await adminAuth.createUser(createData);
     const resetLink = await adminAuth.generatePasswordResetLink(email);
 
     const newUser = {
       id: userRecord.uid,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      role: role || "Youth",
-      phoneNumber: phoneNumber?.trim() || null,
+      name,
+      email,
+      role,
+      orgId: auth.orgId!,
+      phoneNumber: phoneNumber || null,
       createdAt: new Date().toISOString(),
     };
 
     await adminDb.collection("users").doc(userRecord.uid).set(newUser);
 
-    return NextResponse.json({
-      success: true,
-      message: "User created successfully",
-      resetLink,                    // ← sent to frontend
-      email: newUser.email,
+    await writeAuditLog({
+      action: "user.created",
+      orgId: auth.orgId!,
+      actorId: auth.uid,
+      actorName: auth.name,
+      targetId: userRecord.uid,
+      metadata: { name, email, role },
     });
-  } catch (error: any) {
-    console.error("Create user error:", error);
-    return NextResponse.json({ error: error.message || "Failed to create user" }, { status: 400 });
+
+    logger.info("User created", { newUserId: userRecord.uid, orgId: auth.orgId, actorId: auth.uid });
+
+    return created({ message: "User created successfully", resetLink, email });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to create user";
+    logger.error("Create user error", { error: String(error) });
+    return err(message, 400);
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`users-list:${ip}`);
+  if (limited) return limited;
+
   try {
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
+
+    const roleError = requireRole(auth, "Admin", "SuperAdmin", "Leader");
+    if (roleError) return roleError;
+
     const snapshot = await adminDb
       .collection("users")
+      .where("orgId", "==", auth.orgId)
       .orderBy("createdAt", "desc")
-      .get()
-
-    if (snapshot.empty) {
-      return NextResponse.json({
-        success: true,
-        users: [],
-        count: 0
-      })
-    }
+      .get();
 
     const users = snapshot.docs.map((doc) => {
-      const data = doc.data()
+      const data = doc.data();
+      return { id: doc.id, ...data };
+    });
 
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt,
-      }
-    })
-
-    return NextResponse.json({
-      success: true,
-      count: users.length,
-      users
-    })
-
+    return ok(users, users.length);
   } catch (error) {
-    console.error("Error fetching users:", error)
-
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch users" },
-      { status: 500 }
-    )
+    logger.error("Fetch users error", { error: String(error) });
+    return err("Failed to fetch users");
   }
 }

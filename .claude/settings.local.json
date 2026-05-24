@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\codep\\\\OneDrive\\\\Desktop\\\\Projects\\\\Digimatic Monetisation\\\\Gatherly\\\\gatherly\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)",
+      "Bash(Format-Table FullName)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\codep\\\\OneDrive\\\\Desktop\\\\Projects\\\\Digimatic Monetisation\\\\Gatherly\\\\gatherly\\\\src\\\\app\\\\api\\\\payments\\\\[id]\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\codep\\OneDrive\\Desktop\\Projects\\Digimatic Monetisation\\Gatherly\\gatherly\\src\\app\\api\\payments"
+    ]
+  }
+}

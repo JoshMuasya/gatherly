@@ -1,30 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/firebase-admin";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError } from "@/lib/api/auth";
+import { ok, badRequest, notFound, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ registrationId: string }> }
 ) {
-  // Await the params because Next.js 15 wraps them in a Promise
-  const { registrationId } = await context.params;
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`ticket:${ip}`);
+  if (limited) return limited;
 
-  if (!registrationId) {
-    return NextResponse.json({ error: "No registration ID provided" }, { status: 400 });
-  }
+  const { registrationId } = await context.params;
+  if (!registrationId) return badRequest("No registration ID provided");
 
   try {
-    const registrationRef = adminDb.collection("registrations").doc(registrationId);
-    const registrationSnap = await registrationRef.get();
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-    if (!registrationSnap.exists) {
-      return NextResponse.json({ error: "Registration not found" }, { status: 404 });
-    }
+    const registrationSnap = await adminDb
+      .collection("registrations")
+      .doc(registrationId)
+      .get();
 
-    const registrationData = { id: registrationSnap.id, ...registrationSnap.data() };
+    if (!registrationSnap.exists) return notFound("Registration not found");
 
-    return NextResponse.json({ registration: registrationData });
+    const regData = registrationSnap.data()!;
+
+    // Users may only view their own ticket; admins/leaders may view any
+    const isOwner = regData.userId === auth.uid;
+    const isManager = ["Admin", "Leader", "SuperAdmin"].includes(auth.role);
+
+    if (!isOwner && !isManager) return notFound("Registration not found");
+
+    // Scope check — ensure registration belongs to org
+    if (regData.orgId !== auth.orgId) return notFound("Registration not found");
+
+    return ok({ id: registrationSnap.id, ...regData });
   } catch (error) {
-    console.error("Error fetching registration:", error);
-    return NextResponse.json({ error: "Failed to fetch registration" }, { status: 500 });
+    logger.error("Fetch ticket error", { error: String(error) });
+    return err("Failed to fetch registration");
   }
 }

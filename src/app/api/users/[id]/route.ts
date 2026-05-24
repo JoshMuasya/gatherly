@@ -1,133 +1,110 @@
 import { adminAuth, adminDb } from "@/lib/firebase/firebase-admin";
-import { error } from "console";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError, requireRole } from "@/lib/api/auth";
+import { ok, badRequest, notFound, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { sanitizeString } from "@/lib/api/sanitize";
+import { writeAuditLog } from "@/lib/api/audit";
+import { logger } from "@/lib/logger";
 
 export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id: userId } = await context.params;
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`user-delete:${ip}`);
+  if (limited) return limited;
 
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Event ID is rewuired" },
-                { status: 400 }
-            );
-        }
+  try {
+    const { id: userId } = await context.params;
+    if (!userId) return badRequest("User ID is required");
 
-        // Authorization
-        const authHeader = request.headers.get("Authorization");
-    
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-    
-        const idToken = authHeader.split("Bearer ")[1];
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
-    
-        // Check user role
-        const userDoc = await adminDb.collection("users").doc(decodedToken.uid).get();
-    
-        if (!userDoc.exists) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-    
-        const role = userDoc.data()?.role;
-    
-        if (role !== "Admin" && role !== "Leader") {
-            return NextResponse.json(
-            { error: "Admin or Leader access only" },
-            { status: 403 }
-            );
-        }
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-        const userRef = adminDb.collection("users").doc(userId)
-        const userD = await userRef.get()
+    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    if (roleError) return roleError;
 
-        if (!userD.exists) {
-            return NextResponse.json({ error: "User not Found" }, { status: 404 });
-        }
+    const userRef = adminDb.collection("users").doc(userId);
+    const userDoc = await userRef.get();
 
-        await userRef.delete();
+    if (!userDoc.exists) return notFound("User not found");
+    if (userDoc.data()?.orgId !== auth.orgId) return notFound("User not found");
 
-        return NextResponse.json({
-            success: true,
-            message: "User deleted Successfully",
-        });
-    } catch (error) {
-        console.error("Delete event error:", error);
-        
-        return NextResponse.json(
-            { error: "Failed to delete event" },
-            { status: 500 }
-        );
-    }
+    // Prevent self-deletion
+    if (userId === auth.uid) return badRequest("You cannot delete your own account");
+
+    await userRef.delete();
+    await adminAuth.deleteUser(userId);
+
+    await writeAuditLog({
+      action: "user.deleted",
+      orgId: auth.orgId!,
+      actorId: auth.uid,
+      actorName: auth.name,
+      targetId: userId,
+    });
+
+    logger.info("User deleted", { deletedUserId: userId, orgId: auth.orgId, actorId: auth.uid });
+
+    return ok({ deleted: true });
+  } catch (error) {
+    logger.error("Delete user error", { error: String(error) });
+    return err("Failed to delete user");
+  }
 }
 
 export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id: userId } = await context.params;
-        const body = await request.json();
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`user-update:${ip}`);
+  if (limited) return limited;
 
-        const { name, email, phoneNumber, role } =body;
+  try {
+    const { id: userId } = await context.params;
 
-        // Authorization
-        const authHeader = request.headers.get("Authorization");
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-        if (!authHeader?.startsWith("Bearer ")) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const idToken = authHeader.split("Bearer ")[1];
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
-
-        const userDoc = await adminDb.collection("users").doc(decodedToken.uid).get();
-
-        if (!userDoc.exists) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
-        const userrole = userDoc.data()?.role;
-
-        if (userrole !== "Admin" && userrole !== "Leader") {
-            return NextResponse.json(
-                { error: "Admin or Leader access only" },
-                { status: 403 }
-            );
-        }
-
-        const userRef = adminDb.collection("users").doc(userId);
-
-        const userD = await userRef.get()
-
-        if (!userD.exists) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 })
-        }
-
-        const updateData = {
-            ...(name && { name }),
-            ...(phoneNumber && { phoneNumber }),
-            ...(email && { email }),
-            ...(role && { role }),
-            updatedAt: new Date(),
-        }
-
-        await userRef.update(updateData);
-
-        return NextResponse.json({
-            success: true,
-            message: "User updated successfully",
-        })
-    } catch (error) {
-        console.error("Update event error:", error);
-
-        return NextResponse.json(
-        { error: "Failed to update event" },
-        { status: 500 }
-        );
+    // Any user can update their own profile; only admins can update others
+    const isSelf = userId === auth.uid;
+    if (!isSelf) {
+      const roleError = requireRole(auth, "Admin", "SuperAdmin", "Leader");
+      if (roleError) return roleError;
     }
+
+    const body = await request.json();
+
+    const userRef = adminDb.collection("users").doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) return notFound("User not found");
+    if (userDoc.data()?.orgId !== auth.orgId) return notFound("User not found");
+
+    const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+
+    if (body.name) updateData.name = sanitizeString(body.name);
+    if (body.email) updateData.email = sanitizeString(body.email).toLowerCase();
+    if (body.phoneNumber !== undefined) updateData.phoneNumber = sanitizeString(body.phoneNumber ?? "");
+    // Only admins/owners can change roles
+    if (body.role && !isSelf) updateData.role = sanitizeString(body.role);
+
+    await userRef.update(updateData);
+
+    await writeAuditLog({
+      action: "user.updated",
+      orgId: auth.orgId!,
+      actorId: auth.uid,
+      actorName: auth.name,
+      targetId: userId,
+      metadata: updateData,
+    });
+
+    return ok({ updated: true });
+  } catch (error) {
+    logger.error("Update user error", { error: String(error) });
+    return err("Failed to update user");
+  }
 }

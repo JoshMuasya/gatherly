@@ -1,55 +1,35 @@
-import { adminAuth, adminDb } from "@/lib/firebase/firebase-admin";
-import { NextRequest, NextResponse } from "next/server";
+import { adminAuth } from "@/lib/firebase/firebase-admin";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError, requireRole } from "@/lib/api/auth";
+import { ok, badRequest, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { sanitizeString } from "@/lib/api/sanitize";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`reset-pass:${ip}`);
+  if (limited) return limited;
+
   try {
-    const { email } = await request.json();
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: "Email is required" },
-        { status: 400 }
-      );
-    }
+    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    if (roleError) return roleError;
 
-    // Verify Firebase ID Token
-    const authHeader = request.headers.get("Authorization");
+    const body = await request.json();
+    const email = sanitizeString(body.email).toLowerCase();
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    if (!email) return badRequest("Email is required");
 
-    const idToken = authHeader.split("Bearer ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-
-    // Check if requester is admin
-    const adminDoc = await adminDb.collection("users").doc(decodedToken.uid).get();
-
-    if (!adminDoc.exists || adminDoc.data()?.role !== "Admin") {
-      return NextResponse.json(
-        { success: false, error: "Admin access required" },
-        { status: 403 }
-      );
-    }
-
-    // Generate password reset link
     const resetLink = await adminAuth.generatePasswordResetLink(email);
 
-    return NextResponse.json({
-      success: true,
-      resetLink,
-      email,
-    });
+    logger.info("Password reset link generated", { email, actorId: auth.uid, orgId: auth.orgId });
 
+    return ok({ resetLink, email });
   } catch (error) {
-    console.error("Reset password error:", error);
-
-    return NextResponse.json(
-      { success: false, error: "Failed to generate reset link" },
-      { status: 500 }
-    );
+    logger.error("Reset password error", { error: String(error) });
+    return err("Failed to generate reset link");
   }
 }

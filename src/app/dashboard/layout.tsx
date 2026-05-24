@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/Dashboard/AppSidebar";
 import { Topbar } from "@/components/Dashboard/topbar";
 import { Providers } from "../providers";
+import { OrgThemeApplier } from "@/components/OrgThemeApplier";
 
 export default function DashboardLayout({
     children,
@@ -11,6 +12,7 @@ export default function DashboardLayout({
 
     return (
         <Providers>
+            <OrgThemeApplier />
             <SidebarProvider>
                 <div className="flex h-screen bg-[#F8FAFC] w-full overflow-hidden">
                     <AppSidebar />

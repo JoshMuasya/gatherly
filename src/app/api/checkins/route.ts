@@ -1,57 +1,42 @@
-import { adminDb } from "@/lib/firebase/firebase-admin";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError } from "@/lib/api/auth";
+import { badRequest, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { createCheckinController } from "@/lib/controllers/createCheckinController";
+import { getCheckinController } from "@/lib/controllers/getCheckinController";
+import { logger } from "@/lib/logger";
 
-// Unified API handler
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`checkin:${ip}`);
+  if (limited) return limited;
+
   try {
-    const body = await req.json();
-    const { registrationId, eventId } = body;
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-    if (!registrationId || !eventId) {
-      return Response.json({ error: "Missing registrationId or eventId" }, { status: 400 });
-    }
-
-    const checkin = {
-      registrationId,
-      eventId,
-      checkedInAt: new Date().toISOString(),
-    };
-
-    await adminDb.collection("checkins").add(checkin);
-
-    return Response.json({ success: true });
+    return createCheckinController(request, auth.orgId!, auth.uid);
   } catch (error) {
-    console.error(error);
-    return Response.json({ error: "Failed to check in" }, { status: 500 });
+    logger.error("Checkin POST error", { error: String(error) });
+    return err("Checkin failed");
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`checkins-list:${ip}`);
+  if (limited) return limited;
+
   try {
-    const url = new URL(req.url);
-    const eventId = url.searchParams.get("eventId");
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-    if (!eventId) {
-      return Response.json({ error: "Missing eventId" }, { status: 400 });
-    }
+    const url = new URL(request.url);
+    if (!url.searchParams.get("eventId")) return badRequest("eventId is required");
 
-    const snapshot = await adminDb
-      .collection("checkins")
-      .where("eventId", "==", eventId)
-      .orderBy("checkedInAt", "desc")
-      .get();
-
-    if (snapshot.empty) {
-      return Response.json({ success: true, checkins: [] });
-    }
-
-    const checkins = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    return Response.json({ success: true, checkins });
+    return getCheckinController(request, auth.orgId!);
   } catch (error) {
-    console.error(error);
-    return Response.json({ error: "Failed to fetch check-ins" }, { status: 500 });
+    logger.error("Checkin GET error", { error: String(error) });
+    return err("Failed to fetch checkins");
   }
 }

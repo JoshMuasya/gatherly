@@ -1,67 +1,54 @@
-import { adminAuth, adminDb } from "@/lib/firebase/firebase-admin";
-import { NextRequest, NextResponse } from "next/server";
+import { adminDb } from "@/lib/firebase/firebase-admin";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError, requireRole } from "@/lib/api/auth";
+import { ok, badRequest, notFound, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { sanitizeString, sanitizeNumber } from "@/lib/api/sanitize";
+import { writeAuditLog } from "@/lib/api/audit";
+import { logger } from "@/lib/logger";
 
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`event-delete:${ip}`);
+  if (limited) return limited;
+
   try {
     const { id: eventId } = await context.params;
+    if (!eventId) return badRequest("Event ID is required");
 
-    if (!eventId) {
-      return NextResponse.json(
-        { error: "Event ID is required" },
-        { status: 400 }
-      );
-    }
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-    // Authorization
-    const authHeader = request.headers.get("Authorization");
-
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const idToken = authHeader.split("Bearer ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-
-    // Check user role
-    const userDoc = await adminDb.collection("users").doc(decodedToken.uid).get();
-
-    if (!userDoc.exists) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const role = userDoc.data()?.role;
-
-    if (role !== "Admin" && role !== "Leader") {
-      return NextResponse.json(
-        { error: "Admin or Leader access only" },
-        { status: 403 }
-      );
-    }
+    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    if (roleError) return roleError;
 
     const eventRef = adminDb.collection("events").doc(eventId);
     const eventDoc = await eventRef.get();
 
-    if (!eventDoc.exists) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
+    if (!eventDoc.exists) return notFound("Event not found");
+
+    // Ensure event belongs to this org
+    if (eventDoc.data()?.orgId !== auth.orgId) return notFound("Event not found");
 
     await eventRef.delete();
 
-    return NextResponse.json({
-      success: true,
-      message: "Event deleted successfully",
+    await writeAuditLog({
+      action: "event.deleted",
+      orgId: auth.orgId!,
+      actorId: auth.uid,
+      actorName: auth.name,
+      targetId: eventId,
     });
 
-  } catch (error) {
-    console.error("Delete event error:", error);
+    logger.info("Event deleted", { eventId, orgId: auth.orgId, actorId: auth.uid });
 
-    return NextResponse.json(
-      { error: "Failed to delete event" },
-      { status: 500 }
-    );
+    return ok({ deleted: true });
+  } catch (error) {
+    logger.error("Delete event error", { error: String(error) });
+    return err("Failed to delete event");
   }
 }
 
@@ -69,70 +56,55 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id: eventId } = await context.params;
-        const body = await request.json();
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`event-update:${ip}`);
+  if (limited) return limited;
 
-        const { title, desc, location, maxAttendees, date, isFree, price } = body;
+  try {
+    const { id: eventId } = await context.params;
 
-        // Authorization
-        const authHeader = request.headers.get("Authorization");
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
-        if (!authHeader?.startsWith("Bearer ")) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin");
+    if (roleError) return roleError;
 
-        const idToken = authHeader.split("Bearer ")[1];
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const body = await request.json();
+    const { isFree, price, maxAttendees, date, time } = body;
 
-        const userDoc = await adminDb.collection("users").doc(decodedToken.uid).get();
+    const eventRef = adminDb.collection("events").doc(eventId);
+    const eventDoc = await eventRef.get();
 
-        if (!userDoc.exists) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
+    if (!eventDoc.exists) return notFound("Event not found");
+    if (eventDoc.data()?.orgId !== auth.orgId) return notFound("Event not found");
 
-        const role = userDoc.data()?.role;
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
 
-        if (role !== "Admin" && role !== "Leader") {
-            return NextResponse.json(
-                { error: "Admin or Leader access only" },
-                { status: 403 }
-            );
-        }
-
-        const eventRef = adminDb.collection("events").doc(eventId);
-
-        const eventDoc = await eventRef.get()
-
-        if (!eventDoc.exists) {
-            return NextResponse.json({ error: "Event not found" }, { status: 404 })
-        }
-
-        const updateData = {
-            ...(title && { title }),
-            ...(desc && { desc }),
-            ...(location && { location }),
-            ...(maxAttendees && { maxAttendees }),
-            ...(date && { date }),
-            ...(typeof isFree === "boolean" && { isFree }),
-            ...(price !== undefined && { price }),
-            updatedAt: new Date(),
-        }
-
-        await eventRef.update(updateData)
-
-        return NextResponse.json({
-            success: true,
-            message: "Event updated successfully",
-        })
-        
-    } catch (error) {
-        console.error("Update event error:", error);
-
-        return NextResponse.json(
-        { error: "Failed to update event" },
-        { status: 500 }
-        );
+    if (body.title) updateData.title = sanitizeString(body.title);
+    if (body.desc) updateData.desc = sanitizeString(body.desc);
+    if (body.location) updateData.location = sanitizeString(body.location);
+    if (maxAttendees !== undefined) updateData.maxAttendees = sanitizeNumber(maxAttendees);
+    if (date) updateData.date = sanitizeString(date);
+    if (time !== undefined) updateData.time = sanitizeString(time);
+    if (typeof isFree === "boolean") {
+      updateData.isFree = isFree;
+      updateData.price = isFree ? 0 : sanitizeNumber(price ?? 0);
     }
 
+    await eventRef.update(updateData);
+
+    await writeAuditLog({
+      action: "event.updated",
+      orgId: auth.orgId!,
+      actorId: auth.uid,
+      actorName: auth.name,
+      targetId: eventId,
+      metadata: updateData,
+    });
+
+    return ok({ updated: true });
+  } catch (error) {
+    logger.error("Update event error", { error: String(error) });
+    return err("Failed to update event");
+  }
 }

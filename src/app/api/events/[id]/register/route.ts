@@ -1,105 +1,101 @@
 import admin from "firebase-admin";
 import { adminDb, adminAuth } from "@/lib/firebase/firebase-admin";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { requireOrgAuth, isAuthError } from "@/lib/api/auth";
+import { ok, badRequest, notFound, err } from "@/lib/api/response";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { writeAuditLog } from "@/lib/api/audit";
+import { logger } from "@/lib/logger";
+import { sendRegistrationConfirmation } from "@/lib/email";
 
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  try {
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const limited = await checkRateLimit(`register:${ip}`);
+  if (limited) return limited;
 
+  try {
     const { id: eventId } = await context.params;
 
-    const eventRef = adminDb.collection("events").doc(eventId);
+    const auth = await requireOrgAuth(request);
+    if (isAuthError(auth)) return auth;
 
+    const eventRef = adminDb.collection("events").doc(eventId);
     const eventSnap = await eventRef.get();
 
-    if (!eventSnap.exists) {
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
-    }
+    if (!eventSnap.exists) return notFound("Event not found");
+    if (eventSnap.data()?.orgId !== auth.orgId) return notFound("Event not found");
 
-    // Get Authorization Header
-    const authHeader = request.headers.get("Authorization");
-
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split("Bearer ")[1];
-
-    const decoded = await adminAuth.verifyIdToken(token);
-
-    const uid = decoded.uid;
-
-    // Get user details
-    const userSnap = await adminDb.collection("users").doc(uid).get();
-
+    const userSnap = await adminDb.collection("users").doc(auth.uid).get();
     const userData = userSnap.data();
 
-    if (!userData) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
+    if (!userData) return notFound("User not found");
 
     // Prevent duplicate registration
     const existing = await adminDb
       .collection("registrations")
+      .where("orgId", "==", auth.orgId)
       .where("eventId", "==", eventId)
-      .where("userId", "==", uid)
+      .where("userId", "==", auth.uid)
       .get();
 
-    if (!existing.empty) {
-      return NextResponse.json(
-        { error: "Already registered" },
-        { status: 400 }
-      );
-    }
+    if (!existing.empty) return badRequest("You are already registered for this event");
 
-    // Firestore Transaction
+    let registrationId = "";
+
     await adminDb.runTransaction(async (transaction) => {
-
       const eventDoc = await transaction.get(eventRef);
       const eventData = eventDoc.data();
 
-      // increment attendees count
       if (eventData?.isFree) {
         transaction.update(eventRef, {
-          attendeesCount: admin.firestore.FieldValue.increment(1)
+          attendeesCount: admin.firestore.FieldValue.increment(1),
         });
       }
 
-      // create registration
       const registrationRef = adminDb.collection("registrations").doc();
+      registrationId = registrationRef.id;
 
       transaction.set(registrationRef, {
+        orgId: auth.orgId,
         eventId,
-        userId: uid,
+        userId: auth.uid,
         name: userData.name,
         email: userData.email,
-        phone: userData.phone ?? null,
-        registeredAt: admin.firestore.FieldValue.serverTimestamp()
+        phone: userData.phoneNumber ?? null,
+        paymentStatus: eventData?.isFree ? "paid" : "pending",
+        registeredAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-
     });
 
-    return NextResponse.json({
-      success: true
+    await writeAuditLog({
+      action: "registration.created",
+      orgId: auth.orgId!,
+      actorId: auth.uid,
+      actorName: auth.name,
+      targetId: registrationId,
+      metadata: { eventId },
     });
 
+    // Fire-and-forget — email failure must not fail the registration
+    const eventData = eventSnap.data()!;
+    sendRegistrationConfirmation({
+      to: userData.email,
+      name: userData.name,
+      eventTitle: eventData.title,
+      eventDate: eventData.date,
+      eventTime: eventData.time ?? "",
+      eventLocation: eventData.location,
+      registrationId,
+    }).catch((e) => logger.error("Registration email failed", { error: String(e) }));
+
+    logger.info("Registration created", { registrationId, eventId, orgId: auth.orgId });
+
+    return ok({ registrationId });
   } catch (error) {
-    console.error(error);
-
-    return NextResponse.json(
-      { error: "Registration failed" },
-      { status: 500 }
-    );
+    logger.error("Registration error", { error: String(error) });
+    return err("Registration failed");
   }
 }

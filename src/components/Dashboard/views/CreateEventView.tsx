@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const CreateEventView = () => {
     const { currentUser } = useApp();
-    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader";
+    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin";
     const [addingEvent, setAddingEvent] = useState(false);
     const [newEvent, setNewEvent] = useState({
         title: '',
@@ -142,7 +142,7 @@ const CreateEventView = () => {
                                 <Input
                                     id="time"
                                     type="time"
-                                    value={newEvent.date.split("T")[1] || ""} 
+                                    value={newEvent.date.split("T")[1] || ""}
                                     onChange={(e) => {
                                         const timePart = e.target.value;
                                         const datePart = newEvent.date.split("T")[0] || new Date().toISOString().split("T")[0];
