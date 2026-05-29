@@ -1,20 +1,25 @@
 {
   "framework": "nextjs",
-  "regions": ["fra1"],
+  "regions": [
+    "fra1"
+  ],
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
       ]
     }
   ],
   "crons": [
     {
       "path": "/api/cron/health",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
