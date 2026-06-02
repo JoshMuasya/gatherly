@@ -1,4 +1,4 @@
-export type UserRole = 'Youth' | 'Leader' | 'Admin' | 'Owner' | 'SuperAdmin';
+export type UserRole = 'Youth' | 'Leader' | 'Admin' | 'Treasurer' | 'Owner' | 'SuperAdmin';
 
 export type OrgPlan = 'starter' | 'growth' | 'pro';
 
@@ -90,6 +90,17 @@ export interface OrgSummary {
   name: string;
   role: UserRole;
   plan?: OrgPlan;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  orgId: string;
+  actorId: string;
+  actorName?: string | null;
+  targetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  timestamp: string;
 }
 
 export interface Payment {

@@ -22,7 +22,7 @@ export async function DELETE(
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    const roleError = requireRole(auth, "Admin", "SuperAdmin", "Treasurer");
     if (roleError) return roleError;
 
     const userRef = adminDb.collection("users").doc(userId);
@@ -71,7 +71,7 @@ export async function PATCH(
     // Any user can update their own profile; only admins can update others
     const isSelf = userId === auth.uid;
     if (!isSelf) {
-      const roleError = requireRole(auth, "Admin", "SuperAdmin", "Leader");
+      const roleError = requireRole(auth, "Admin", "SuperAdmin", "Leader", "Treasurer");
       if (roleError) return roleError;
     }
 

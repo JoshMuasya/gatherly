@@ -38,12 +38,13 @@ export const createEventsController = async (req: Request) => {
         // Role check
         if (
             callerData?.role !== "Admin" &&
-            callerData?.role !== "Leader"
+            callerData?.role !== "Leader" &&
+            callerData?.role !== "Treasurer"
         ) {
             return Response.json(
                 {
                     success: false,
-                    error: "Admin or Leader access only",
+                    error: "Admin, Leader, or Treasurer access only",
                 },
                 { status: 403 }
             );

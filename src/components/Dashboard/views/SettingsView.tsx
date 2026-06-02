@@ -24,8 +24,8 @@ export function SettingsView() {
     const [activeTab, setActiveTab] = useState<Tab>('profile');
 
     // Leader+ can access org tab (for colors); Admin/Owner/SuperAdmin can edit full details
-    const canAccessOrgTab = ['Leader', 'Admin', 'Owner', 'SuperAdmin'].includes(currentUser?.role ?? '');
-    const canEditOrgDetails = ['Admin', 'Owner', 'SuperAdmin'].includes(currentUser?.role ?? '');
+    const canAccessOrgTab = ['Leader', 'Admin', 'Owner', 'SuperAdmin', 'Treasurer'].includes(currentUser?.role ?? '');
+    const canEditOrgDetails = ['Admin', 'Owner', 'SuperAdmin', 'Treasurer'].includes(currentUser?.role ?? '');
 
     // Profile form state
     const [profileForm, setProfileForm] = useState({ name: currentUser?.name ?? '', phoneNumber: currentUser?.phoneNumber ?? '' });

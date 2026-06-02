@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin");
+    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin", "Treasurer");
     if (roleError) return roleError;
 
     const body = await request.json();

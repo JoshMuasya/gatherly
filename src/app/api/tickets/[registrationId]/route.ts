@@ -31,7 +31,7 @@ export async function GET(
 
     // Users may only view their own ticket; admins/leaders may view any
     const isOwner = regData.userId === auth.uid;
-    const isManager = ["Admin", "Leader", "SuperAdmin"].includes(auth.role);
+    const isManager = ["Admin", "Leader", "SuperAdmin", "Treasurer"].includes(auth.role);
 
     if (!isOwner && !isManager) return notFound("Registration not found");
 

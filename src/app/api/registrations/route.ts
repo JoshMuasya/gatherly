@@ -5,7 +5,7 @@ import { ok, err } from "@/lib/api/response";
 import { checkRateLimit } from "@/lib/api/rate-limit";
 import { logger } from "@/lib/logger";
 
-const ADMIN_ROLES = ["Admin", "SuperAdmin", "Leader"];
+const ADMIN_ROLES = ["Admin", "SuperAdmin", "Leader", "Treasurer"];
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") ?? "unknown";

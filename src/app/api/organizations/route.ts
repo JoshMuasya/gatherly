@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const auth = await verifyAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    const roleError = requireRole(auth, "SuperAdmin");
     if (roleError) return roleError;
 
     const body = await request.json();
@@ -111,7 +111,7 @@ export async function PATCH(request: NextRequest) {
     const auth = await verifyAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Leader", "Admin", "Owner", "SuperAdmin");
+    const roleError = requireRole(auth, "Leader", "Admin", "Owner", "SuperAdmin", "Treasurer");
     if (roleError) return roleError;
 
     if (!auth.orgId) return badRequest("No organization to update");
@@ -119,7 +119,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const updates: Record<string, unknown> = {};
 
-    const isFullAdmin = ["Admin", "Owner", "SuperAdmin"].includes(auth.role);
+    const isFullAdmin = ["Admin", "Owner", "SuperAdmin", "Treasurer"].includes(auth.role);
 
     // Colors — any allowed role can update
     if (body.primaryColor !== undefined) updates.primaryColor = sanitizeString(body.primaryColor);

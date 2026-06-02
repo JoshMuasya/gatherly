@@ -26,7 +26,7 @@ function exportCSV(filename: string, rows: string[][]): void {
 
 export function ReportsView() {
     const { currentUser } = useApp();
-    const isAdminOrAbove = ['Admin', 'Owner', 'SuperAdmin'].includes(currentUser?.role ?? '');
+    const isAdminOrAbove = ['Admin', 'Owner', 'SuperAdmin', 'Treasurer'].includes(currentUser?.role ?? '');
 
     // Fetch up to 500 records for complete org-wide reporting
     const { data: eventsData, isLoading: loadingEvents } = useEvents();

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    const roleError = requireRole(auth, "Admin", "SuperAdmin", "Treasurer");
     if (roleError) return roleError;
 
     const body = await request.json();
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "SuperAdmin", "Leader");
+    const roleError = requireRole(auth, "Admin", "SuperAdmin", "Leader", "Treasurer");
     if (roleError) return roleError;
 
     const snapshot = await adminDb

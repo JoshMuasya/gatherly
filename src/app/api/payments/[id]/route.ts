@@ -23,7 +23,7 @@ export async function PATCH(
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Leader", "Admin", "Owner", "SuperAdmin");
+    const roleError = requireRole(auth, "Leader", "Admin", "Treasurer", "Owner", "SuperAdmin");
     if (roleError) return roleError;
 
     const body = await request.json();
@@ -86,6 +86,18 @@ export async function PATCH(
 
       await batch.commit();
 
+      // Notify the user their payment was approved
+      await adminDb.collection("notifications").add({
+        orgId: auth.orgId,
+        userId: payment.userId,
+        type: "payment_approved",
+        title: "Payment approved",
+        body: `Your KES ${Number(payment.amount).toLocaleString()} payment for ${payment.eventTitle ?? "the event"} has been approved.`,
+        read: false,
+        createdAt: new Date().toISOString(),
+        metadata: { paymentId, amount: payment.amount, eventTitle: payment.eventTitle },
+      });
+
       // Send receipt email (fire-and-forget)
       adminDb
         .collection("users")
@@ -126,6 +138,18 @@ export async function PATCH(
         rejectionReason,
         rejectedBy: auth.uid,
         rejectedAt: new Date().toISOString(),
+      });
+
+      // Notify the user their payment was rejected
+      await adminDb.collection("notifications").add({
+        orgId: auth.orgId,
+        userId: payment.userId,
+        type: "payment_rejected",
+        title: "Payment rejected",
+        body: `Your KES ${Number(payment.amount).toLocaleString()} payment for ${payment.eventTitle ?? "the event"} was rejected. Reason: ${rejectionReason}`,
+        read: false,
+        createdAt: new Date().toISOString(),
+        metadata: { paymentId, amount: payment.amount, eventTitle: payment.eventTitle, rejectionReason },
       });
 
       await writeAuditLog({

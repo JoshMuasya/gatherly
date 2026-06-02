@@ -7,7 +7,7 @@ import { checkRateLimit } from "@/lib/api/rate-limit";
 import { sanitizeString, sanitizeNumber } from "@/lib/api/sanitize";
 import { writeAuditLog } from "@/lib/api/audit";
 import { logger } from "@/lib/logger";
-import { sendPaymentPendingNotification } from "@/lib/whatsapp";
+import { sendPaymentApprovalRequest } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") ?? "unknown";
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return badRequest("mpesaCode is required for M-Pesa payments");
     }
 
-    const isAdminRole = ["Admin", "SuperAdmin", "Leader"].includes(auth.role);
+    const isAdminRole = ["Admin", "SuperAdmin", "Leader", "Treasurer"].includes(auth.role);
 
     if (!isAdminRole && userId !== auth.uid) {
       return badRequest("You can only record a payment for yourself");
@@ -127,18 +127,39 @@ export async function POST(request: NextRequest) {
       metadata: { eventId, amount, method, userId, paymentStatus },
     });
 
-    // Notify org leaders/admins via WhatsApp when M-Pesa code needs approval
+    // Notify user and treasurers when M-Pesa code needs approval
     if (paymentStatus === "pending_approval") {
-      notifyLeaders({
-        orgId: auth.orgId!,
-        userName,
-        eventTitle: eventDoc.data()?.title ?? "",
-        amount,
-        mpesaCode: sanitizeString(mpesaCode),
-        paymentId: paymentRef.id,
-      }).catch((e) =>
-        logger.error("WhatsApp leader notification failed", { error: String(e) })
-      );
+      const eventTitle = eventDoc.data()?.title ?? "";
+
+      // Notify the submitting user their payment is under review
+      try {
+        await adminDb.collection("notifications").add({
+          orgId: auth.orgId,
+          userId,
+          type: "payment_pending_user",
+          title: "Payment under review",
+          body: `Your KES ${Number(amount).toLocaleString()} M-Pesa payment for ${eventTitle} has been submitted and is awaiting approval.`,
+          read: false,
+          createdAt: new Date().toISOString(),
+          metadata: { paymentId: paymentRef.id, amount, eventTitle },
+        });
+      } catch (e) {
+        logger.error("User pending notification failed", { error: String(e) });
+      }
+
+      // Notify treasurers
+      try {
+        await notifyTreasurer({
+          orgId: auth.orgId!,
+          userName,
+          eventTitle,
+          amount,
+          mpesaCode: sanitizeString(mpesaCode),
+          paymentId: paymentRef.id,
+        });
+      } catch (e) {
+        logger.error("Treasurer notification failed", { error: String(e) });
+      }
     }
 
     logger.info("Payment recorded", {
@@ -163,7 +184,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function notifyLeaders(params: {
+async function notifyTreasurer(params: {
   orgId: string;
   userName: string;
   eventTitle: string;
@@ -171,25 +192,90 @@ async function notifyLeaders(params: {
   mpesaCode: string;
   paymentId: string;
 }) {
-  const orgDoc = await adminDb.collection("organizations").doc(params.orgId).get();
-  const orgData = orgDoc.data();
-  const orgName = orgData?.name ?? "Your Organisation";
-  const notifyNumber = orgData?.whatsappNotifyNumber as string | undefined;
+  // Roles are stored in `users.role` for primary-org members and in
+  // `memberships.role` for secondary-org members — query both.
+  const [orgDoc, primarySnap, secondarySnap] = await Promise.all([
+    adminDb.collection("organizations").doc(params.orgId).get(),
+    adminDb
+      .collection("users")
+      .where("orgId", "==", params.orgId)
+      .where("role", "==", "Treasurer")
+      .get(),
+    adminDb
+      .collection("memberships")
+      .where("orgId", "==", params.orgId)
+      .where("role", "==", "Treasurer")
+      .get(),
+  ]);
 
-  if (!notifyNumber) {
-    logger.warn("No WhatsApp notify number configured for org — skipping", { orgId: params.orgId });
+  const orgName = orgDoc.data()?.name ?? "Your Organisation";
+  const dashboardUrl = `${(process.env.NEXT_PUBLIC_BASE_URL ?? "").replace(/\/$/, "")}/dashboard/payments`;
+
+  // Collect unique user IDs from both sources
+  const seenIds = new Set<string>();
+  const primaryUsers = primarySnap.docs.map((d) => {
+    seenIds.add(d.id);
+    return { id: d.id, ...(d.data() as { email?: string; name?: string }) };
+  });
+
+  // For secondary-org members, fetch their user doc for email/name
+  const secondaryUserIds = secondarySnap.docs
+    .map((d) => d.data().userId as string)
+    .filter((uid) => !seenIds.has(uid));
+
+  interface UserRecord { id: string; email?: string; name?: string; }
+  const secondaryUsers: UserRecord[] = (
+    await Promise.all(secondaryUserIds.map((uid) => adminDb.collection("users").doc(uid).get()))
+  )
+    .filter((d) => d.exists)
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<UserRecord, "id">) }));
+
+  const userDocs: UserRecord[] = [...primaryUsers, ...secondaryUsers];
+
+  if (userDocs.length === 0) {
+    logger.warn("No treasurer found to notify", { orgId: params.orgId });
     return;
   }
 
-  await sendPaymentPendingNotification({
-    to: notifyNumber,
-    userName: params.userName,
-    eventTitle: params.eventTitle,
-    amount: params.amount,
-    mpesaCode: params.mpesaCode,
-    paymentId: params.paymentId,
-    orgName,
-  });
+  const notificationBase = {
+    orgId: params.orgId,
+    type: "payment_pending",
+    title: "Payment awaiting approval",
+    body: `${params.userName} submitted KES ${params.amount.toLocaleString()} for ${params.eventTitle}`,
+    read: false,
+    createdAt: new Date().toISOString(),
+    metadata: {
+      paymentId: params.paymentId,
+      amount: params.amount,
+      mpesaCode: params.mpesaCode,
+      submittedBy: params.userName,
+      eventTitle: params.eventTitle,
+    },
+  };
+
+  await Promise.all(
+    userDocs.map(async (user) => {
+      // Write in-app notification
+      await adminDb.collection("notifications").add({ ...notificationBase, userId: user.id });
+
+      // Send email
+      if (user.email) {
+        await sendPaymentApprovalRequest({
+          to: user.email,
+          leaderName: user.name ?? "there",
+          submittedBy: params.userName,
+          eventTitle: params.eventTitle,
+          amount: params.amount,
+          mpesaCode: params.mpesaCode,
+          paymentId: params.paymentId,
+          orgName,
+          dashboardUrl,
+        }).catch((e) => logger.warn("Approval email failed", { to: user.email, error: String(e) }));
+      }
+    })
+  );
+
+  logger.info("Treasurer notified", { orgId: params.orgId, count: userDocs.length });
 }
 
 export async function GET(request: NextRequest) {
@@ -201,7 +287,7 @@ export async function GET(request: NextRequest) {
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const isAdminRole = ["Admin", "SuperAdmin", "Leader"].includes(auth.role);
+    const isAdminRole = ["Admin", "SuperAdmin", "Leader", "Treasurer"].includes(auth.role);
 
     const url = new URL(request.url);
     const userIdFilter = url.searchParams.get("userId");

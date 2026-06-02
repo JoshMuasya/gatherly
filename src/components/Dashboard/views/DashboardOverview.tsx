@@ -27,7 +27,7 @@ export function DashboardOverview() {
     const [registerSuccess, setRegisterSuccess] = useState(false);
     const [ticketData, setTicketData] = useState<TicketData | null>(null);
 
-    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin";
+    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer";
 
     const { data: eventsData, isLoading: loadingEvents } = useEvents();
     const { data: regsData, isLoading: loadingRegs } = useRegistrations();

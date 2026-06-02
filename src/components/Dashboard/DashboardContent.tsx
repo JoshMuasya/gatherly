@@ -11,6 +11,7 @@ import { SettingsView } from "./views/SettingsView";
 import { UsersView } from "./views/UsersView";
 import { UserRole } from "@/lib/types";
 import CheckInView from "./views/CheckInView";
+import { AuditLogsView } from "./views/AuditLogsView";
 
 interface ViewMapProps {
     userRole?: UserRole;
@@ -25,6 +26,7 @@ const viewMap: Record<string, React.ComponentType<any>> = {
     "create-event": CreateEventView,
     'check-in': CheckInView,
     reports: ReportsView,
+    'audit-logs': AuditLogsView,
     settings: SettingsView,
 };
 

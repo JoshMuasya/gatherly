@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { StatCard } from '../StatCard';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ export function PaymentsView({ userRole }: Props) {
     const [rejectionReason, setRejectionReason] = useState('');
     const [reviewLoading, setReviewLoading] = useState<string | null>(null);
 
-    const isAdminOrLeader = ['Admin', 'Leader', 'SuperAdmin'].includes(userRole);
+    const isAdminOrLeader = ['Admin', 'Leader', 'SuperAdmin', 'Treasurer'].includes(userRole);
 
     const { data: eventsData, isLoading: loadingEvents } = useEvents();
     const { data: regsData, isLoading: loadingRegs } = useRegistrations();
@@ -203,17 +203,19 @@ export function PaymentsView({ userRole }: Props) {
                                                             size="sm"
                                                             className="bg-green-600 hover:bg-green-700 text-white h-7"
                                                             onClick={() => handleApprove(payment.id)}
-                                                            disabled={reviewLoading === payment.id}
+                                                            disabled={!!reviewLoading}
                                                         >
-                                                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                                                            Approve
+                                                            {reviewLoading === payment.id
+                                                                ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                                                : <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                                                            {reviewLoading === payment.id ? 'Approving…' : 'Approve'}
                                                         </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
                                                             className="border-red-200 text-red-600 hover:bg-red-50 h-7"
                                                             onClick={() => { setRejectDialogPaymentId(payment.id); setRejectionReason(''); }}
-                                                            disabled={reviewLoading === payment.id}
+                                                            disabled={!!reviewLoading}
                                                         >
                                                             <XCircle className="h-3.5 w-3.5 mr-1" />
                                                             Reject
@@ -372,7 +374,8 @@ export function PaymentsView({ userRole }: Props) {
                                 onClick={handleReject}
                                 disabled={!rejectionReason.trim() || !!reviewLoading}
                             >
-                                Reject Payment
+                                {reviewLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                                {reviewLoading ? 'Rejecting…' : 'Reject Payment'}
                             </Button>
                         </div>
                     </div>

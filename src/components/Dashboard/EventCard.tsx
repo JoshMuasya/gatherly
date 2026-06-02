@@ -42,7 +42,8 @@ export function EventCard({
     const isAdminOrLeader =
         showAdminActions &&
         (userRole?.toLowerCase() === "admin" ||
-            userRole?.toLowerCase() === "leader");
+            userRole?.toLowerCase() === "leader" ||
+            userRole?.toLowerCase() === "treasurer");
 
     const attendeesCount = event.attendeesCount ?? 0;
 

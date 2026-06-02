@@ -1,9 +1,8 @@
 'use client';
 
-import { Bell } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { UserMenu } from './user-menu';
+import { NotificationBell } from './NotificationBell';
 
 export function Topbar() {
     return (
@@ -18,10 +17,7 @@ export function Topbar() {
                 </div>
             </div>
             <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" className="relative text-muted-foreground">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
-                </Button>
+                <NotificationBell />
                 <UserMenu />
             </div>
         </header>

@@ -31,7 +31,7 @@ export function UsersView() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [resettingIds, setResettingIds] = useState<Set<string>>(new Set());
 
-    const isAdmin = currentUser?.role === "Admin" || currentUser?.role === "Owner" || currentUser?.role === "SuperAdmin";
+    const isAdmin = currentUser?.role === "Admin" || currentUser?.role === "Owner" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer";
 
     const { data: orgData } = useQuery({
         queryKey: ['organization'],
@@ -151,6 +151,7 @@ export function UsersView() {
                                                 <SelectItem value="Youth">{youthLabel}</SelectItem>
                                                 <SelectItem value="Leader">{leaderLabel}</SelectItem>
                                                 <SelectItem value="Admin">Admin</SelectItem>
+                                                <SelectItem value="Treasurer">Treasurer</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -193,6 +194,7 @@ export function UsersView() {
                                                 <SelectItem value="Youth">{youthLabel}</SelectItem>
                                                 <SelectItem value="Leader">{leaderLabel}</SelectItem>
                                                 <SelectItem value="Admin">Admin</SelectItem>
+                                                <SelectItem value="Treasurer">Treasurer</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

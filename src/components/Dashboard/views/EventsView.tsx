@@ -34,7 +34,7 @@ export function EventsView() {
     });
     const [isOpen, setIsOpen] = useState(false);
 
-    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin";
+    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer";
 
     const { data: eventsData, isLoading: loadingEvents } = useEvents();
     const { data: paymentsData } = usePayments();

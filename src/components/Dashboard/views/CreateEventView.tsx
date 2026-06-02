@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const CreateEventView = () => {
     const { currentUser } = useApp();
-    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin";
+    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer";
     const [addingEvent, setAddingEvent] = useState(false);
     const [newEvent, setNewEvent] = useState({
         title: '',

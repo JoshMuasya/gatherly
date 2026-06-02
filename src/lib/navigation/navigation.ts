@@ -9,6 +9,7 @@ import {
   BarChart3,
   Settings,
   CheckCircle,
+  ScrollText,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -33,9 +34,22 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
+    { title: 'Audit Logs', id: 'audit-logs', icon: ScrollText },
     { title: 'Settings', id: 'settings', icon: Settings },
   ],
 
+  Treasurer: [
+    { title: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
+    { title: 'Events', id: 'events', icon: Calendar },
+    { title: 'Create Event', id: 'create-event', icon: PlusCircle },
+    { title: 'Users', id: 'users', icon: Users },
+    { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Check In', id: 'check-in', icon: CheckCircle },
+    { title: 'Payments', id: 'payments', icon: CreditCard },
+    { title: 'Reports', id: 'reports', icon: BarChart3 },
+    { title: 'Audit Logs', id: 'audit-logs', icon: ScrollText },
+    { title: 'Settings', id: 'settings', icon: Settings },
+  ],
   Admin: [
     { title: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
     { title: 'Events', id: 'events', icon: Calendar },
@@ -45,6 +59,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
+    { title: 'Audit Logs', id: 'audit-logs', icon: ScrollText },
     { title: 'Settings', id: 'settings', icon: Settings },
   ],
   Owner: [
@@ -56,6 +71,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
+    { title: 'Audit Logs', id: 'audit-logs', icon: ScrollText },
     { title: 'Settings', id: 'settings', icon: Settings },
   ],
   SuperAdmin: [
@@ -67,6 +83,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
+    { title: 'Audit Logs', id: 'audit-logs', icon: ScrollText },
     { title: 'Settings', id: 'settings', icon: Settings },
   ],
 };

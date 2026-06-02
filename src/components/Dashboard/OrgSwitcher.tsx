@@ -20,10 +20,7 @@ export function OrgSwitcher({ collapsed }: { collapsed: boolean }) {
     const [newOrg, setNewOrg] = useState({ name: '' });
     const [creating, setCreating] = useState(false);
 
-    const canCreateOrg =
-        currentUser?.role === 'SuperAdmin' ||
-        currentUser?.role === 'Owner' ||
-        currentUser?.role === 'Admin';
+    const canCreateOrg = currentUser?.role === 'SuperAdmin';
 
     // Don't render if user only has one org and can't create more
     if (!canCreateOrg && userOrgs.length <= 1) return null;
