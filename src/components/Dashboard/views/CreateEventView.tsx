@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const CreateEventView = () => {
     const { currentUser } = useApp();
-    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer";
+    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer" || currentUser?.role === "Owner";
     const [addingEvent, setAddingEvent] = useState(false);
     const [newEvent, setNewEvent] = useState({
         title: '',
@@ -200,9 +200,24 @@ const CreateEventView = () => {
                                 <Input
                                     id="maxAttendees"
                                     type="number"
-                                    value={newEvent.maxAttendees}
+                                    min={1}
+                                    placeholder="Unlimited"
+                                    value={newEvent.maxAttendees === 0 ? '' : newEvent.maxAttendees}
                                     onChange={update('maxAttendees')}
+                                    disabled={newEvent.maxAttendees === 0}
                                 />
+                                <div className="flex items-center space-x-2 pt-1">
+                                    <input
+                                        id="unlimitedAttendees"
+                                        type="checkbox"
+                                        checked={newEvent.maxAttendees === 0}
+                                        onChange={(e) =>
+                                            setNewEvent((prev) => ({ ...prev, maxAttendees: e.target.checked ? 0 : 50 }))
+                                        }
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <Label htmlFor="unlimitedAttendees" className="font-normal">No limit</Label>
+                                </div>
                             </div>
                         </div>
 

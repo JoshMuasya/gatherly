@@ -64,6 +64,62 @@ export interface Events {
   createdAt: string;
 }
 
+export type FormFieldType =
+  | 'short_text' | 'long_text' | 'email' | 'phone'
+  | 'number' | 'single_select' | 'multi_select' | 'date';
+
+export interface FormFieldOption {
+  id: string;
+  label: string;
+}
+
+export interface FormField {
+  id: string;
+  type: FormFieldType;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: FormFieldOption[];
+  order: number;
+}
+
+export interface FormDefinition {
+  id: string;
+  orgId: string;
+  eventId: string;
+  title: string;
+  description?: string;
+  fields: FormField[];
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface FormSubmission {
+  id: string;
+  orgId: string;
+  formId: string;
+  eventId: string;
+  answers: Record<string, string | string[]>;
+  submittedAt: string;
+}
+
+export interface FormSubmissionPayment {
+  id: string;
+  orgId: string;
+  formId: string;
+  eventId: string;
+  submissionId: string;
+  amount: number;
+  method: 'cash' | 'mpesa';
+  mpesaCode?: string;
+  cashReceivedBy?: string;
+  recordedBy: string;
+  recordedByName?: string;
+  createdAt: string;
+}
+
 export interface Registration {
   id: string;
   orgId: string;

@@ -6,7 +6,9 @@ export type AuditAction =
   | "event.created" | "event.updated" | "event.deleted"
   | "registration.created" | "registration.cancelled"
   | "payment.recorded" | "payment.approved" | "payment.rejected"
-  | "checkin.created";
+  | "checkin.created"
+  | "form.created" | "form.updated"
+  | "form_submission_payment.recorded";
 
 interface AuditEntry {
   action: AuditAction;

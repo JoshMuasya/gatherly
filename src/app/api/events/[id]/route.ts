@@ -22,7 +22,7 @@ export async function DELETE(
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "SuperAdmin");
+    const roleError = requireRole(auth, "Admin", "SuperAdmin", "Owner");
     if (roleError) return roleError;
 
     const eventRef = adminDb.collection("events").doc(eventId);
@@ -66,7 +66,7 @@ export async function PATCH(
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin");
+    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin", "Treasurer", "Owner");
     if (roleError) return roleError;
 
     const body = await request.json();
@@ -83,7 +83,11 @@ export async function PATCH(
     if (body.title) updateData.title = sanitizeString(body.title);
     if (body.desc) updateData.desc = sanitizeString(body.desc);
     if (body.location) updateData.location = sanitizeString(body.location);
-    if (maxAttendees !== undefined) updateData.maxAttendees = sanitizeNumber(maxAttendees);
+    if (maxAttendees !== undefined) {
+      const sanitizedMax = sanitizeNumber(maxAttendees);
+      if (sanitizedMax < 0) return badRequest("Max attendees cannot be negative");
+      updateData.maxAttendees = sanitizedMax;
+    }
     if (date) updateData.date = sanitizeString(date);
     if (time !== undefined) updateData.time = sanitizeString(time);
     if (typeof isFree === "boolean") {

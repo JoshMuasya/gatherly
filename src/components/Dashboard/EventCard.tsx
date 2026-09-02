@@ -43,14 +43,16 @@ export function EventCard({
         showAdminActions &&
         (userRole?.toLowerCase() === "admin" ||
             userRole?.toLowerCase() === "leader" ||
-            userRole?.toLowerCase() === "treasurer");
+            userRole?.toLowerCase() === "treasurer" ||
+            userRole?.toLowerCase() === "owner" ||
+            userRole?.toLowerCase() === "superadmin");
 
     const attendeesCount = event.attendeesCount ?? 0;
+    const isUnlimited = event.maxAttendees <= 0;
 
-    const progress =
-        event.maxAttendees > 0
-            ? (attendeesCount / event.maxAttendees) * 100
-            : 0;
+    const progress = isUnlimited
+        ? 0
+        : (attendeesCount / event.maxAttendees) * 100;
 
     return (
         <Card className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 animate-fade-in">
@@ -92,12 +94,12 @@ export function EventCard({
                     <div className="flex items-center gap-2">
                         <UsersIcon className="h-3.5 w-3.5 text-primary" />
                         <span>
-                            {attendeesCount} / {event.maxAttendees} attendees
+                            {isUnlimited ? `${attendeesCount} attendees (Unlimited)` : `${attendeesCount} / ${event.maxAttendees} attendees`}
                         </span>
                     </div>
 
                     {/* Progress Bar */}
-                    <Progress value={progress} className="h-2" />
+                    {!isUnlimited && <Progress value={progress} className="h-2" />}
                 </div>
             </CardContent>
 

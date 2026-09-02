@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const auth = await requireOrgAuth(request);
     if (isAuthError(auth)) return auth;
 
-    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin", "Treasurer");
+    const roleError = requireRole(auth, "Admin", "Leader", "SuperAdmin", "Treasurer", "Owner");
     if (roleError) return roleError;
 
     const body = await request.json();
@@ -26,8 +26,13 @@ export async function POST(request: NextRequest) {
     const desc = sanitizeString(body.desc);
     const location = sanitizeString(body.location);
 
-    if (!title || !desc || !location || !maxAttendees || !date) {
+    if (!title || !desc || !location || maxAttendees === undefined || maxAttendees === null || !date) {
       return badRequest("Missing required fields: title, desc, location, maxAttendees, date");
+    }
+
+    // maxAttendees === 0 means "unlimited" — only reject genuinely invalid (negative) values
+    if (sanitizeNumber(maxAttendees) < 0) {
+      return badRequest("Max attendees cannot be negative");
     }
 
     const eventData = {

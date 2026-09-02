@@ -6,6 +6,7 @@ import CreateEventView from "./views/CreateEventView";
 import { EventsView } from "./views/EventsView";
 import { PaymentsView } from "./views/PaymentsView";
 import { RegistrationsView } from "./views/RegistrationsView";
+import { FormSubmissionsView } from "./views/FormSubmissionsView";
 import { ReportsView } from "./views/ReportsView";
 import { SettingsView } from "./views/SettingsView";
 import { UsersView } from "./views/UsersView";
@@ -21,6 +22,7 @@ const viewMap: Record<string, React.ComponentType<any>> = {
     dashboard: DashboardOverview,
     events: EventsView,
     registrations: RegistrationsView,
+    "form-submissions": FormSubmissionsView,
     users: UsersView,
     payments: PaymentsView,
     "create-event": CreateEventView,

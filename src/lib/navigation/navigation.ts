@@ -10,6 +10,7 @@ import {
   Settings,
   CheckCircle,
   ScrollText,
+  FileText,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -32,6 +33,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'My Events', id: 'events', icon: Calendar },
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Form Submissions', id: 'form-submissions', icon: FileText },
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Audit Logs', id: 'audit-logs', icon: ScrollText },
@@ -44,6 +46,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Users', id: 'users', icon: Users },
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Form Submissions', id: 'form-submissions', icon: FileText },
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
@@ -56,6 +59,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Users', id: 'users', icon: Users },
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Form Submissions', id: 'form-submissions', icon: FileText },
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
@@ -68,6 +72,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Users', id: 'users', icon: Users },
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Form Submissions', id: 'form-submissions', icon: FileText },
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },
@@ -80,6 +85,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
     { title: 'Create Event', id: 'create-event', icon: PlusCircle },
     { title: 'Users', id: 'users', icon: Users },
     { title: 'Registrations', id: 'registrations', icon: ClipboardList },
+    { title: 'Form Submissions', id: 'form-submissions', icon: FileText },
     { title: 'Check In', id: 'check-in', icon: CheckCircle },
     { title: 'Payments', id: 'payments', icon: CreditCard },
     { title: 'Reports', id: 'reports', icon: BarChart3 },

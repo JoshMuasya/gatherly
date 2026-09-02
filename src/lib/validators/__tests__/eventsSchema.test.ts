@@ -35,8 +35,13 @@ describe('createEventSchema', () => {
         expect(result.success).toBe(false);
     });
 
-    it('rejects zero maxAttendees', () => {
+    it('accepts zero maxAttendees as unlimited', () => {
         const result = createEventSchema.safeParse({ ...valid, maxAttendees: 0 });
+        expect(result.success).toBe(true);
+    });
+
+    it('rejects negative maxAttendees', () => {
+        const result = createEventSchema.safeParse({ ...valid, maxAttendees: -1 });
         expect(result.success).toBe(false);
     });
 

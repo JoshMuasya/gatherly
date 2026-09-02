@@ -8,8 +8,10 @@ import { useApp } from '@/lib/context/AppContext';
 import { EventCard } from '../EventCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { EventFormBuilder } from '@/components/Dashboard/EventFormBuilder';
 import { toast } from "sonner";
 import { Events, TicketData } from '@/lib/types';
 import { TicketDialog } from '@/components/Tickets/TicketDialog';
@@ -34,7 +36,7 @@ export function EventsView() {
     });
     const [isOpen, setIsOpen] = useState(false);
 
-    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer";
+    const isAdminLeader = currentUser?.role === "Admin" || currentUser?.role === "Leader" || currentUser?.role === "SuperAdmin" || currentUser?.role === "Treasurer" || currentUser?.role === "Owner";
 
     const { data: eventsData, isLoading: loadingEvents } = useEvents();
     const { data: paymentsData } = usePayments();
@@ -228,7 +230,24 @@ export function EventsView() {
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label>Max Attendees</Label>
-                            <Input type="number" value={newEvent.maxAttendees} onChange={e => setNewEvent({ ...newEvent, maxAttendees: Number(e.target.value) })} />
+                            <Input
+                                type="number"
+                                min={1}
+                                placeholder="Unlimited"
+                                value={newEvent.maxAttendees === 0 ? '' : newEvent.maxAttendees}
+                                onChange={e => setNewEvent({ ...newEvent, maxAttendees: Number(e.target.value) })}
+                                disabled={newEvent.maxAttendees === 0}
+                            />
+                            <div className="flex items-center gap-2 pt-1">
+                                <input
+                                    type="checkbox"
+                                    checked={newEvent.maxAttendees === 0}
+                                    onChange={e => setNewEvent({ ...newEvent, maxAttendees: e.target.checked ? 0 : 50 })}
+                                    id="unlimitedAttendeesCreate"
+                                    className="h-4 w-4"
+                                />
+                                <label htmlFor="unlimitedAttendeesCreate" className="text-sm text-foreground">No limit</label>
+                            </div>
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label>Date &amp; Time</Label>
@@ -257,35 +276,61 @@ export function EventsView() {
 
             {/* Edit Modal */}
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Edit Event</DialogTitle></DialogHeader>
                     {editingEvent && (
-                        <div className="space-y-4">
-                            <div className="flex flex-col gap-1.5">
-                                <Label>Title</Label>
-                                <Input value={editingEvent.title} onChange={e => setEditingEvent({ ...editingEvent, title: e.target.value })} />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <Label>Description</Label>
-                                <Textarea value={editingEvent.desc} onChange={e => setEditingEvent({ ...editingEvent, desc: e.target.value })} />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <Label>Location</Label>
-                                <Input value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <Label>Max Attendees</Label>
-                                <Input type="number" value={editingEvent.maxAttendees} onChange={e => setEditingEvent({ ...editingEvent, maxAttendees: Number(e.target.value) })} />
-                            </div>
-                        </div>
+                        <Tabs defaultValue="details">
+                            <TabsList className="w-full">
+                                <TabsTrigger value="details">Details</TabsTrigger>
+                                <TabsTrigger value="form">Form</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="details" className="space-y-4">
+                                <div className="flex flex-col gap-1.5">
+                                    <Label>Title</Label>
+                                    <Input value={editingEvent.title} onChange={e => setEditingEvent({ ...editingEvent, title: e.target.value })} />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <Label>Description</Label>
+                                    <Textarea value={editingEvent.desc} onChange={e => setEditingEvent({ ...editingEvent, desc: e.target.value })} />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <Label>Location</Label>
+                                    <Input value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <Label>Max Attendees</Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        placeholder="Unlimited"
+                                        value={editingEvent.maxAttendees === 0 ? '' : editingEvent.maxAttendees}
+                                        onChange={e => setEditingEvent({ ...editingEvent, maxAttendees: Number(e.target.value) })}
+                                        disabled={editingEvent.maxAttendees === 0}
+                                    />
+                                    <div className="flex items-center gap-2 pt-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={editingEvent.maxAttendees === 0}
+                                            onChange={e => setEditingEvent({ ...editingEvent, maxAttendees: e.target.checked ? 0 : 50 })}
+                                            id="unlimitedAttendeesEdit"
+                                            className="h-4 w-4"
+                                        />
+                                        <label htmlFor="unlimitedAttendeesEdit" className="text-sm text-foreground">No limit</label>
+                                    </div>
+                                </div>
+                                <DialogFooter className="mt-4 flex justify-end gap-2">
+                                    <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleUpdateEvent} disabled={updateEvent.isPending}>
+                                        {updateEvent.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                        Update Event
+                                    </Button>
+                                </DialogFooter>
+                            </TabsContent>
+                            <TabsContent value="form">
+                                <EventFormBuilder eventId={editingEvent.id} />
+                            </TabsContent>
+                        </Tabs>
                     )}
-                    <DialogFooter className="mt-4 flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-                        <Button onClick={handleUpdateEvent} disabled={updateEvent.isPending}>
-                            {updateEvent.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                            Update Event
-                        </Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

@@ -12,17 +12,7 @@ import { useEvents } from '@/hooks/useEvents';
 import { useRegistrations } from '@/hooks/useRegistrations';
 import { usePayments } from '@/hooks/usePayments';
 import { useApp } from '@/lib/context/AppContext';
-
-function exportCSV(filename: string, rows: string[][]): void {
-    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
+import { exportCSV } from '@/lib/exportCsv';
 
 export function ReportsView() {
     const { currentUser } = useApp();
@@ -70,7 +60,7 @@ export function ReportsView() {
         const header = ['Event Title', 'Date', 'Location', 'Max Attendees', 'Registered', 'Revenue (KSh)', 'Attendance %'];
         const rows = eventStats.map(({ event, regCount, revenue, attendanceRate }) => [
             event.title, event.date, event.location,
-            String(event.maxAttendees), String(regCount),
+            event.maxAttendees > 0 ? String(event.maxAttendees) : 'Unlimited', String(regCount),
             String(revenue), attendanceRate !== null ? String(attendanceRate) : 'N/A',
         ]);
         exportCSV('events-report.csv', [header, ...rows]);
