@@ -30,6 +30,7 @@ function FieldInput({
 }) {
   switch (field.type) {
     case 'long_text':
+    case 'anonymous_text':
       return <Textarea value={(value as string) ?? ''} onChange={e => onChange(e.target.value)} />;
     case 'email':
       return <Input type="email" value={(value as string) ?? ''} onChange={e => onChange(e.target.value)} />;
@@ -183,6 +184,9 @@ export default function PublicFormPage() {
               <Label>
                 {field.label}{field.required && <span className="text-destructive"> *</span>}
               </Label>
+              {field.type === 'anonymous_text' && (
+                <p className="text-xs text-muted-foreground">This answer is anonymous and can&apos;t be traced back to you.</p>
+              )}
               <FieldInput
                 field={field}
                 value={answers[field.id]}

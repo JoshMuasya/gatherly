@@ -66,7 +66,8 @@ export interface Events {
 
 export type FormFieldType =
   | 'short_text' | 'long_text' | 'email' | 'phone'
-  | 'number' | 'single_select' | 'multi_select' | 'date';
+  | 'number' | 'single_select' | 'multi_select' | 'date'
+  | 'anonymous_text';
 
 export interface FormFieldOption {
   id: string;
@@ -103,6 +104,19 @@ export interface FormSubmission {
   eventId: string;
   answers: Record<string, string | string[]>;
   submittedAt: string;
+}
+
+// Deliberately has no submissionId, phoneKey, or any other field that could
+// link an answer back to the FormSubmission it was collected alongside.
+export interface AnonymousResponse {
+  id: string;
+  orgId: string;
+  formId: string;
+  eventId: string;
+  fieldId: string;
+  fieldLabel: string;
+  answer: string;
+  submittedDate: string;
 }
 
 export interface FormSubmissionPayment {

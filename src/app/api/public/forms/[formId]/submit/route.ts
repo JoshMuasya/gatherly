@@ -56,14 +56,40 @@ export async function POST(
       }
     }
 
-    await adminDb.collection("formSubmissions").add({
-      orgId: form.orgId,
-      formId,
-      eventId: form.eventId,
-      answers: parsed.data,
-      phoneKey,
-      submittedAt: new Date(),
-    });
+    // Split out anonymous-question answers before writing the submission —
+    // they must never share a document (or any linking id) with the rest of
+    // this person's answers, or they wouldn't actually be anonymous.
+    const anonymousFields = fields.filter((f) => f.type === "anonymous_text");
+    const answers: Record<string, unknown> = { ...parsed.data };
+    const submittedDate = new Date().toISOString().slice(0, 10);
+
+    const anonymousWrites = anonymousFields
+      .filter((f) => answers[f.id])
+      .map((f) =>
+        adminDb.collection("formAnonymousResponses").add({
+          orgId: form.orgId,
+          formId,
+          eventId: form.eventId,
+          fieldId: f.id,
+          fieldLabel: f.label,
+          answer: String(answers[f.id]),
+          submittedDate,
+        })
+      );
+
+    for (const f of anonymousFields) delete answers[f.id];
+
+    await Promise.all([
+      adminDb.collection("formSubmissions").add({
+        orgId: form.orgId,
+        formId,
+        eventId: form.eventId,
+        answers,
+        phoneKey,
+        submittedAt: new Date(),
+      }),
+      ...anonymousWrites,
+    ]);
 
     logger.info("Form submission created", { formId, orgId: form.orgId });
 

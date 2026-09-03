@@ -25,6 +25,7 @@ const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   single_select: 'Single choice',
   multi_select: 'Multiple choice',
   date: 'Date',
+  anonymous_text: 'Anonymous question',
 };
 
 const SELECT_TYPES: FormFieldType[] = ['single_select', 'multi_select'];
@@ -203,6 +204,13 @@ export function EventFormBuilder({ eventId }: EventFormBuilderProps) {
                   </Select>
                 </div>
               </div>
+
+              {field.type === 'anonymous_text' && (
+                <p className="text-xs text-muted-foreground pl-2 border-l-2">
+                  Answers to this question are stored separately from the rest of the submission
+                  and can never be linked back to who submitted it — not even by you.
+                </p>
+              )}
 
               {SELECT_TYPES.includes(field.type) && (
                 <div className="space-y-2 pl-2 border-l-2">

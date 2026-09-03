@@ -1,9 +1,18 @@
 import * as z from "zod";
+import { FormFieldType } from "@/lib/types";
 
-export const formFieldTypeSchema = z.enum([
+const FIELD_TYPES = [
   "short_text", "long_text", "email", "phone",
-  "number", "single_select", "multi_select", "date",
-]);
+  "number", "single_select", "multi_select", "date", "anonymous_text",
+] as const satisfies readonly FormFieldType[];
+
+// Compile-time guard: adding a new FormFieldType without listing it above
+// is a type error here, rather than a 400 at runtime.
+type UncoveredFieldType = Exclude<FormFieldType, (typeof FIELD_TYPES)[number]>;
+const _allFieldTypesCovered: UncoveredFieldType extends never ? true : never = true;
+void _allFieldTypesCovered;
+
+export const formFieldTypeSchema = z.enum(FIELD_TYPES);
 
 const formFieldOptionSchema = z.object({
   id: z.string().min(1),

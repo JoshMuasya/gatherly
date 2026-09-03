@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StatCard } from '../StatCard';
 import { RecordSubmissionPaymentDialog } from '../RecordSubmissionPaymentDialog';
 import { useEvents } from '@/hooks/useEvents';
-import { useEventForm, useFormSubmissions, FormSubmissionWithBalance } from '@/hooks/useForms';
+import { useEventForm, useFormSubmissions, useAnonymousResponses, FormSubmissionWithBalance } from '@/hooks/useForms';
 import { exportCSV } from '@/lib/exportCsv';
 import { FormField } from '@/lib/types';
 
@@ -32,25 +32,36 @@ export function FormSubmissionsView() {
 
   const { data: submissionsData, isLoading: loadingSubmissions } = useFormSubmissions(form?.id);
   const submissions = submissionsData?.submissions ?? [];
-  const fields = form?.fields ?? [];
+  const fields = useMemo(() => form?.fields ?? [], [form]);
+  const identifiedFields = useMemo(() => fields.filter(f => f.type !== 'anonymous_text'), [fields]);
+  const anonymousFields = useMemo(() => fields.filter(f => f.type === 'anonymous_text'), [fields]);
   const summary = submissionsData?.summary;
 
+  const { data: anonymousData } = useAnonymousResponses(anonymousFields.length > 0 ? form?.id : undefined);
+  const anonymousResponses = anonymousData?.responses ?? [];
+
   const isLoading = loadingForm || loadingSubmissions;
-  const columnCount = fields.length + 3; // fields + Paid + Balance + Submitted (Actions column excluded from colSpan on purpose — see below)
+  const columnCount = identifiedFields.length + 3; // fields + Paid + Balance + Submitted (Actions column excluded from colSpan on purpose — see below)
 
   const selectedEvent = allEvents.find(e => e.id === selectedEventId);
   const payingSubmission = submissions.find(s => s.id === payingSubmissionId) ?? null;
+  const eventSlug = (selectedEvent?.title ?? 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   const handleExport = () => {
-    const header = [...fields.map((f: FormField) => f.label), 'Paid', 'Balance', 'Submitted'];
+    const header = [...identifiedFields.map((f: FormField) => f.label), 'Paid', 'Balance', 'Submitted'];
     const rows = submissions.map((sub: FormSubmissionWithBalance) => [
-      ...fields.map((f: FormField) => formatAnswer(sub.answers[f.id])),
+      ...identifiedFields.map((f: FormField) => formatAnswer(sub.answers[f.id])),
       String(sub.amountPaid),
       String(sub.balance),
       sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '',
     ]);
-    const eventSlug = (selectedEvent?.title ?? 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     exportCSV(`${eventSlug}-submissions.csv`, [header, ...rows]);
+  };
+
+  const handleExportAnonymous = () => {
+    const header = ['Question', 'Answer', 'Date'];
+    const rows = anonymousResponses.map(r => [r.fieldLabel, r.answer, r.submittedDate]);
+    exportCSV(`${eventSlug}-anonymous-responses.csv`, [header, ...rows]);
   };
 
   return (
@@ -111,7 +122,7 @@ export function FormSubmissionsView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {fields.map(field => (
+                    {identifiedFields.map(field => (
                       <TableHead key={field.id}>{field.label}</TableHead>
                     ))}
                     <TableHead>Paid</TableHead>
@@ -138,7 +149,7 @@ export function FormSubmissionsView() {
                   ) : (
                     submissions.map(sub => (
                       <TableRow key={sub.id}>
-                        {fields.map(field => (
+                        {identifiedFields.map(field => (
                           <TableCell key={field.id}>{formatAnswer(sub.answers[field.id])}</TableCell>
                         ))}
                         <TableCell>KSh {sub.amountPaid.toLocaleString()}</TableCell>
@@ -167,6 +178,51 @@ export function FormSubmissionsView() {
               </Table>
             </CardContent>
           </Card>
+
+          {anonymousFields.length > 0 && (
+            <Card>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-display font-semibold text-foreground">Anonymous Responses</h2>
+                    <p className="text-sm text-muted-foreground">
+                      These answers aren&apos;t linked to any guest above — there&apos;s no way to tell who submitted them.
+                    </p>
+                  </div>
+                  {anonymousResponses.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={handleExportAnonymous}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export CSV
+                    </Button>
+                  )}
+                </div>
+
+                {anonymousResponses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No anonymous responses yet</p>
+                ) : (
+                  <div className="space-y-4">
+                    {anonymousFields.map(field => {
+                      const responsesForField = anonymousResponses.filter(r => r.fieldId === field.id);
+                      if (responsesForField.length === 0) return null;
+                      return (
+                        <div key={field.id} className="space-y-2">
+                          <p className="text-sm font-medium text-foreground">{field.label}</p>
+                          <ul className="space-y-2">
+                            {responsesForField.map(r => (
+                              <li key={r.id} className="rounded-md bg-muted px-3 py-2 text-sm">
+                                <p>{r.answer}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{r.submittedDate}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 

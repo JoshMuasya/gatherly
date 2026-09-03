@@ -70,3 +70,19 @@ export function useRecordSubmissionPayment(formId: string | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["form-submissions", formId] }),
   });
 }
+
+export interface AnonymousResponseSummary {
+  id: string;
+  fieldId: string;
+  fieldLabel: string;
+  answer: string;
+  submittedDate: string;
+}
+
+export function useAnonymousResponses(formId: string | undefined) {
+  return useQuery({
+    queryKey: ["form-anonymous-responses", formId],
+    queryFn: () => api.get<{ responses: AnonymousResponseSummary[] }>(`/api/forms/${formId}/anonymous-responses`),
+    enabled: !!auth.currentUser && !!formId,
+  });
+}

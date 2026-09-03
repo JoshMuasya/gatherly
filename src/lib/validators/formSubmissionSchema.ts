@@ -13,6 +13,7 @@ function baseSchemaForField(field: FormField): z.ZodType {
       return z.string().trim().min(1, "Date is required");
     case "long_text":
     case "short_text":
+    case "anonymous_text":
       return z.string().trim();
     case "single_select": {
       const ids = (field.options ?? []).map((o) => o.id) as [string, ...string[]];
