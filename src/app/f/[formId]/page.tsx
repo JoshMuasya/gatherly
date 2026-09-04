@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { MarkdownText } from '@/components/MarkdownText';
 import { usePublicForm, useSubmitPublicForm } from '@/hooks/usePublicForm';
 import { buildSubmissionSchema } from '@/lib/validators/formSubmissionSchema';
 import { FormField } from '@/lib/types';
@@ -176,7 +177,9 @@ export default function PublicFormPage() {
         <CardHeader>
           <CardTitle>{data.title}</CardTitle>
           {data.eventTitle && <CardDescription>For {data.eventTitle}</CardDescription>}
-          {data.description && <p className="text-sm text-muted-foreground pt-2">{data.description}</p>}
+          {data.description && (
+            <MarkdownText className="text-muted-foreground pt-2">{data.description}</MarkdownText>
+          )}
         </CardHeader>
         <CardContent className="space-y-5">
           {fields.map(field => (

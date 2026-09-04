@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { MarkdownText } from '@/components/MarkdownText';
 import { FormField, FormFieldType } from '@/lib/types';
 import { useEventForm, useCreateForm, useUpdateForm } from '@/hooks/useForms';
 
@@ -173,7 +174,23 @@ export function EventFormBuilder({ eventId }: EventFormBuilderProps) {
       </div>
       <div className="flex flex-col gap-1.5">
         <Label>Description (optional)</Label>
-        <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Shown at the top of the public form" />
+        <Textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder={"Shown at the top of the public form.\n\n**Bold**, *italic*, [links](https://example.com), emojis 🙌 and\n- bullet lists\nall work."}
+          className="min-h-32"
+        />
+        <p className="text-xs text-muted-foreground">
+          Formatting: <code className="font-mono">**bold**</code>, <code className="font-mono">*italic*</code>,{' '}
+          <code className="font-mono">[link](url)</code>, <code className="font-mono">- bullet</code>. Emojis work as-is,
+          and line breaks appear exactly as you type them.
+        </p>
+        {description.trim() && (
+          <div className="rounded-md border bg-muted/40 p-3">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Preview</p>
+            <MarkdownText className="text-muted-foreground">{description}</MarkdownText>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">

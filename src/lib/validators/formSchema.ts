@@ -73,7 +73,7 @@ export const createFormSchema = z
   .object({
     eventId: z.string().min(1, "Event ID is required"),
     title: z.string().min(3, "Title must be at least 3 characters long"),
-    description: z.string().optional(),
+    description: z.string().max(5000, "Description is too long (max 5000 characters)").optional(),
     fields: z.array(formFieldSchema).min(1, "At least one field is required"),
   })
   .superRefine((data, ctx) => assertUniqueFieldIds(data.fields, ctx));
@@ -81,7 +81,7 @@ export const createFormSchema = z
 export const updateFormSchema = z
   .object({
     title: z.string().min(3, "Title must be at least 3 characters long").optional(),
-    description: z.string().optional(),
+    description: z.string().max(5000, "Description is too long (max 5000 characters)").optional(),
     fields: z.array(formFieldSchema).min(1, "At least one field is required").optional(),
     isActive: z.boolean().optional(),
   })
