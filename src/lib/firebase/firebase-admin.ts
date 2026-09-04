@@ -17,5 +17,10 @@ const app =
 
 
 export const adminAuth = getAuth(app);
-export const adminDb = getFirestore(app);
+
+// FIREBASE_DATABASE_ID selects a named Firestore database (used to run against
+// a region-local database). Unset = the project's "(default)" database.
+const databaseId = process.env.FIREBASE_DATABASE_ID;
+export const adminDb = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+
 export const adminStorage = getStorage(app);

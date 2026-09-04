@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "seed:owner": "node scripts/seed-owner.mjs"
+    "seed:owner": "node scripts/seed-owner.mjs",
+    "migrate:firestore": "node scripts/migrate-firestore.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
