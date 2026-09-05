@@ -13,12 +13,9 @@ import { RecordSubmissionPaymentDialog } from '../RecordSubmissionPaymentDialog'
 import { useEvents } from '@/hooks/useEvents';
 import { useEventForm, useFormSubmissions, useAnonymousResponses, FormSubmissionWithBalance } from '@/hooks/useForms';
 import { exportCSV } from '@/lib/exportCsv';
+import { formatAnswer } from '@/lib/formatAnswer';
 import { FormField } from '@/lib/types';
 
-function formatAnswer(value: string | string[] | undefined): string {
-  if (value === undefined) return '—';
-  return Array.isArray(value) ? value.join(', ') : value;
-}
 
 export function FormSubmissionsView() {
   const { data: eventsData, isLoading: loadingEvents } = useEvents();
@@ -50,7 +47,7 @@ export function FormSubmissionsView() {
   const handleExport = () => {
     const header = [...identifiedFields.map((f: FormField) => f.label), 'Paid', 'Balance', 'Submitted'];
     const rows = submissions.map((sub: FormSubmissionWithBalance) => [
-      ...identifiedFields.map((f: FormField) => formatAnswer(sub.answers[f.id])),
+      ...identifiedFields.map((f: FormField) => formatAnswer(sub.answers[f.id], f)),
       String(sub.amountPaid),
       String(sub.balance),
       sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '',
@@ -150,7 +147,7 @@ export function FormSubmissionsView() {
                     submissions.map(sub => (
                       <TableRow key={sub.id}>
                         {identifiedFields.map(field => (
-                          <TableCell key={field.id}>{formatAnswer(sub.answers[field.id])}</TableCell>
+                          <TableCell key={field.id}>{formatAnswer(sub.answers[field.id], field)}</TableCell>
                         ))}
                         <TableCell>KSh {sub.amountPaid.toLocaleString()}</TableCell>
                         <TableCell>
